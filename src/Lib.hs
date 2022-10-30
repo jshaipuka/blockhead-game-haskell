@@ -1,33 +1,30 @@
 module Lib
-  ( someFunc,
+  ( startGame,
   )
 where
 
-import System.IO
-import Text.Printf
+import Data.List (intercalate)
+import Data.List.Split
+import System.Random
 
-someFunc :: IO ()
-someFunc = do
-  hSetEncoding stdout utf8
-  printf "%s" ("And немного русского" :: String)
---  readDictionary
 --  (x, y, letter) <- makeUserMove
---  print (makeMoveTwoDim createField x y letter)
+--  print (makeMoveTwoDim createField (x, y) letter)
+--  hSetEncoding stdout utf8
 
-createField :: [[Char]]
-createField =
-  [ [' ', ' ', ' ', ' ', ' '],
-    [' ', ' ', ' ', ' ', ' '],
-    [' ', ' ', ' ', ' ', ' '],
-    [' ', ' ', ' ', ' ', ' '],
-    [' ', ' ', ' ', ' ', ' ']
-  ]
+createField :: String -> [[Char]]
+createField = replaceRow createEmptyField 2
 
-makeMoveOneDim :: [Char] -> Int -> Char -> [Char]
-makeMoveOneDim field x letter = take x field ++ [letter] ++ drop (x + 1) field
+createEmptyField :: [[Char]]
+createEmptyField = replicate 5 (replicate 5 '.')
 
-makeMoveTwoDim :: [[Char]] -> Int -> Int -> Char -> [[Char]]
-makeMoveTwoDim field x y letter = take x field ++ [makeMoveOneDim (field !! x) y letter] ++ drop (x + 1) field
+replaceChar :: [[Char]] -> (Int, Int) -> Char -> [[Char]]
+replaceChar field (x, y) letter = replaceRow field x (replaceChar' (field !! x) y letter)
+
+replaceRow :: [[Char]] -> Int -> [Char] -> [[Char]]
+replaceRow field x newRow = take x field ++ [newRow] ++ drop (x + 1) field
+
+replaceChar' :: [Char] -> Int -> Char -> [Char]
+replaceChar' field x letter = take x field ++ [letter] ++ drop (x + 1) field
 
 makeUserMove :: IO (Int, Int, Char)
 makeUserMove = do
@@ -39,6 +36,19 @@ makeUserMove = do
   letter <- getLine
   return (read x, read y, head letter)
 
-readDictionary = do
+dictionary :: IO [String]
+dictionary = do
   contents <- readFile "C:\\PROJECTS\\haskell\\blockhead-game\\src\\slova.txt"
-  putStrLn contents
+  return (splitOn "\n" contents)
+
+wordsOfLength :: Int -> [String] -> [String]
+wordsOfLength _ [] = []
+wordsOfLength n (x : xs) = if length x == n then x : wordsOfLength n xs else wordsOfLength n xs
+
+startGame :: IO ()
+startGame = do
+  d <- dictionary
+  let initWords = wordsOfLength 5 d
+  target <- randomRIO (0, length initWords) :: IO Int
+  let field = createField (initWords !! target)
+  putStrLn (intercalate "\n" field)

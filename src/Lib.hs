@@ -34,6 +34,7 @@ makeUserMove = do
 
 dictionary :: IO [String]
 dictionary = do
+  --  contents <- readFile "C:\\PROJECTS\\haskell\\blockhead-game\\src\\slova.txt"
   contents <- readFile "/Users/yaskovdev/dev/git_home/blockhead-game-haskell/src/slova.txt"
   return (splitOn "\n" contents)
 
@@ -45,6 +46,20 @@ wordsOfLength n (x : xs) = if length x == n then x : wordsOfLength n xs else wor
 availableCells :: [[Char]] -> [(Int, Int)]
 availableCells _ = []
 
+neighbours :: (Int, Int) -> [(Int, Int)]
+neighbours (x, y) = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+
+hasLetter :: [[Char]] -> (Int, Int) -> Bool
+hasLetter field (a, b) = (field !! a) !! b /= '.'
+
+reachable :: [[Char]] -> (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+reachable field (x, y) visited =
+  filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length field && notElem (a, b) visited && hasLetter field (a, b)) (neighbours (x, y))
+--
+--bfs :: [[Char]] -> [(Int, Int)] -> [(Int, Int)] -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
+--bfs _ [] _ pathSoFar answer = pathSoFar : answer
+--bfs field (x : xs) visited pathSoFar answer = bfs field (xs ++ reachable field x visited) (visited ++ reachable field x visited) pathSoFar (answer ++ reachable field x visited)
+
 startGame :: IO ()
 startGame = do
   d <- dictionary
@@ -52,3 +67,4 @@ startGame = do
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let field = createField (initWords !! initWordIndex)
   putStrLn (intercalate "\n" field)
+--  print (bfs field [(2, 0)] [(2, 0)] [(2, 0)])

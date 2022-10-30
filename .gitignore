@@ -1,0 +1,7 @@
+.idea/
+*.iml
+/out/
+*.cabal
+stack.yaml.lock
+.stack-work/
+*~

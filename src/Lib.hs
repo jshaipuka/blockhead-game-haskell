@@ -7,10 +7,6 @@ import Data.List (intercalate)
 import Data.List.Split
 import System.Random
 
---  (x, y, letter) <- makeUserMove
---  print (makeMoveTwoDim createField (x, y) letter)
---  hSetEncoding stdout utf8
-
 createField :: String -> [[Char]]
 createField = replaceRow createEmptyField 2
 
@@ -38,17 +34,21 @@ makeUserMove = do
 
 dictionary :: IO [String]
 dictionary = do
-  contents <- readFile "C:\\PROJECTS\\haskell\\blockhead-game\\src\\slova.txt"
+  contents <- readFile "/Users/yaskovdev/dev/git_home/blockhead-game-haskell/src/slova.txt"
   return (splitOn "\n" contents)
 
 wordsOfLength :: Int -> [String] -> [String]
 wordsOfLength _ [] = []
 wordsOfLength n (x : xs) = if length x == n then x : wordsOfLength n xs else wordsOfLength n xs
 
+-- TODO: Syabr implements
+availableCells :: [[Char]] -> [(Int, Int)]
+availableCells _ = []
+
 startGame :: IO ()
 startGame = do
   d <- dictionary
   let initWords = wordsOfLength 5 d
-  target <- randomRIO (0, length initWords) :: IO Int
-  let field = createField (initWords !! target)
+  initWordIndex <- randomRIO (0, length initWords) :: IO Int
+  let field = createField (initWords !! initWordIndex)
   putStrLn (intercalate "\n" field)

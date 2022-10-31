@@ -5,11 +5,14 @@ where
 
 import Data.List (intercalate)
 import Data.List.Split
+import Data.Set (fromList, toList)
 import System.Random
 
 type Field = [[Char]]
 
 type Cell = (Int, Int)
+
+type Move = (Cell, Char)
 
 createField :: String -> Field
 createField = replaceRow createEmptyField 2
@@ -46,15 +49,18 @@ wordsOfLength :: Int -> [String] -> [String]
 wordsOfLength _ [] = []
 wordsOfLength n (x : xs) = if length x == n then x : wordsOfLength n xs else wordsOfLength n xs
 
-availableCells :: Field -> [Cell]
-availableCells field = filterCells' field (cellsOf field)
+getAvailableCells :: Field -> [Cell]
+getAvailableCells field = filterCells' field (allCells field)
 
-cellsOf :: Field -> [Cell]
-cellsOf field = concatMap (\i -> map (\j -> (i, j)) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
+allCells :: Field -> [Cell]
+allCells field = concatMap (\i -> map (\j -> (i, j)) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
+
+cellsWithLetters :: Field -> [Cell]
+cellsWithLetters field = filter (hasLetter field) (allCells field)
 
 filterCells' :: Field -> [Cell] -> [Cell]
 filterCells' _ [] = []
-filterCells' field (candidate : candidates) = 
+filterCells' field (candidate : candidates) =
   if isEmpty field candidate && hasNeighboursWithLetter field candidate then candidate : filterCells' field candidates else filterCells' field candidates
 
 hasNeighboursWithLetter :: Field -> Cell -> Bool
@@ -62,7 +68,8 @@ hasNeighboursWithLetter field cell = any (hasLetter field) (getNeighbours field 
 
 getNeighbours :: Field -> Cell -> [Cell]
 getNeighbours field (x, y) = filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a)) neighbours
-  where neighbours = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+  where
+    neighbours = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
 
 isEmpty :: Field -> Cell -> Bool
 isEmpty field (a, b) = (field !! a) !! b == '.'
@@ -81,6 +88,30 @@ paths' :: Field -> Cell -> [Cell] -> [Cell] -> [[Cell]]
 paths' field start visited pathSoFar =
   pathSoFar : concatMap (\n -> paths' field n (visited ++ [n]) (pathSoFar ++ [n])) (reachable field start visited)
 
+alphabet :: [Char]
+alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
+
+getAvailableMoves :: Field -> [Move]
+getAvailableMoves field = concatMap (\cell -> map (\letter -> (cell, letter)) alphabet) (getAvailableCells field)
+
+getWords :: Field -> [Move] -> [String]
+getWords field moves = concatMap (getWords' field) moves
+
+getWords' :: Field -> Move -> [String]
+getWords' field (cell, letter) = map (pathToWord fieldAfterMove) (getWords'' fieldAfterMove cell)
+  where
+    fieldAfterMove = replaceChar field cell letter
+
+getWords'' :: Field -> Cell -> [[Cell]]
+getWords'' field updatedCell = filter (elem updatedCell) (concatMap (paths field) (cellsWithLetters field))
+
+pathToWord :: Field -> [Cell] -> String
+pathToWord field path = map (\(x, y) -> (field !! x) !! y) path
+
+-- TODO: filter out duplicates as early as possible
+mkUniq :: Ord a => [a] -> [a]
+mkUniq = toList . fromList
+
 startGame :: IO ()
 startGame = do
   d <- dictionary
@@ -88,5 +119,6 @@ startGame = do
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let field = createField (initWords !! initWordIndex)
   putStrLn (intercalate "\n" field)
-  print (availableCells field)
-  print (paths field (2, 1))
+  let allWords = mkUniq (getWords field (getAvailableMoves field))
+  -- TODO: turn the dictionary into a set to speedup searching. Or is Haskell doing that under the hood already?
+  putStrLn (intercalate "\n" (filter (`elem` d) allWords))

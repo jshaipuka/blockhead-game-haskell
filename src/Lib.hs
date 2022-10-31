@@ -54,16 +54,14 @@ hasLetter field (a, b) = (field !! a) !! b /= '.'
 
 reachable :: [[Char]] -> (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 reachable field (x, y) visited =
-  filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length field && notElem (a, b) visited && hasLetter field (a, b)) (getNeighbours (x, y))
+  filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a) && notElem (a, b) visited && hasLetter field (a, b)) (getNeighbours (x, y))
 
 paths :: [[Char]] -> (Int, Int) -> [[(Int, Int)]]
 paths field start = paths' field start [start] [start]
 
 paths' :: [[Char]] -> (Int, Int) -> [(Int, Int)] -> [(Int, Int)] -> [[(Int, Int)]]
 paths' field start visited pathSoFar =
-  if null neighbours then [pathSoFar] else concatMap (\n -> paths' field n (visited ++ [n]) (pathSoFar ++ [n])) neighbours
-  where
-    neighbours = reachable field start visited
+  pathSoFar : concatMap (\n -> paths' field n (visited ++ [n]) (pathSoFar ++ [n])) (reachable field start visited)
 
 startGame :: IO ()
 startGame = do

@@ -55,10 +55,16 @@ hasLetter field (a, b) = (field !! a) !! b /= '.'
 reachable :: [[Char]] -> (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 reachable field (x, y) visited =
   filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length field && notElem (a, b) visited && hasLetter field (a, b)) (neighbours (x, y))
---
---bfs :: [[Char]] -> [(Int, Int)] -> [(Int, Int)] -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
---bfs _ [] _ pathSoFar answer = pathSoFar : answer
---bfs field (x : xs) visited pathSoFar answer = bfs field (xs ++ reachable field x visited) (visited ++ reachable field x visited) pathSoFar (answer ++ reachable field x visited)
+
+concatWithEach :: [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
+concatWithEach path [] = [path]
+concatWithEach _ paths = paths
+
+bfs :: [[Char]] -> (Int, Int) -> [[(Int, Int)]]
+bfs field start = bfs' field start [start] [start]
+
+bfs' :: [[Char]] -> (Int, Int) -> [(Int, Int)] -> [(Int, Int)] -> [[(Int, Int)]]
+bfs' field start visited pathSoFar = concatWithEach pathSoFar (concatMap (\n -> bfs' field n (visited ++ [n]) (pathSoFar ++ [n])) (reachable field start visited))
 
 startGame :: IO ()
 startGame = do
@@ -67,4 +73,4 @@ startGame = do
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let field = createField (initWords !! initWordIndex)
   putStrLn (intercalate "\n" field)
---  print (bfs field [(2, 0)] [(2, 0)] [(2, 0)])
+  print (bfs field (2, 1))

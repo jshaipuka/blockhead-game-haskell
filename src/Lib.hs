@@ -49,18 +49,20 @@ wordsOfLength n (x : xs) = if length x == n then x : wordsOfLength n xs else wor
 availableCells :: Field -> [Cell]
 availableCells field = filterCells' field (cellsOf field)
 
+cellsOf :: Field -> [Cell]
+cellsOf field = concatMap (\i -> map (\j -> (i, j)) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
+
 filterCells' :: Field -> [Cell] -> [Cell]
 filterCells' _ [] = []
-filterCells' field (candidate : candidates) = if isEmpty field candidate && hasLetterNeighbours field candidate then candidate : filterCells' field candidates else filterCells' field candidates
+filterCells' field (candidate : candidates) = 
+  if isEmpty field candidate && hasNeighboursWithLetter field candidate then candidate : filterCells' field candidates else filterCells' field candidates
 
-hasLetterNeighbours :: Field -> Cell -> Bool
-hasLetterNeighbours field cell = any (hasLetter field) (getValidNeighbours field cell)
+hasNeighboursWithLetter :: Field -> Cell -> Bool
+hasNeighboursWithLetter field cell = any (hasLetter field) (getNeighbours field cell)
 
-getValidNeighbours :: Field -> Cell -> [Cell]
-getValidNeighbours field cell = filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a)) (getNeighbours cell)
-
-getNeighbours :: Cell -> [Cell]
-getNeighbours (x, y) = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+getNeighbours :: Field -> Cell -> [Cell]
+getNeighbours field (x, y) = filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a)) neighbours
+  where neighbours = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
 
 isEmpty :: Field -> Cell -> Bool
 isEmpty field (a, b) = (field !! a) !! b == '.'
@@ -70,13 +72,10 @@ hasLetter field cell = not (isEmpty field cell)
 
 reachable :: Field -> Cell -> [Cell] -> [Cell]
 reachable field (x, y) visited =
-  filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a) && notElem (a, b) visited && hasLetter field (a, b)) (getNeighbours (x, y))
+  filter (\(a, b) -> notElem (a, b) visited && hasLetter field (a, b)) (getNeighbours field (x, y))
 
 paths :: Field -> Cell -> [[Cell]]
 paths field start = paths' field start [start] [start]
-
-cellsOf :: Field -> [Cell]
-cellsOf field = concatMap (\i -> map (\j -> (i, j)) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
 
 paths' :: Field -> Cell -> [Cell] -> [Cell] -> [[Cell]]
 paths' field start visited pathSoFar =

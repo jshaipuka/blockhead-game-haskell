@@ -33,8 +33,8 @@ replaceRow field x newRow = take x field ++ [newRow] ++ drop (x + 1) field
 replaceChar' :: [Char] -> Int -> Char -> [Char]
 replaceChar' field x letter = take x field ++ [letter] ++ drop (x + 1) field
 
-makeUserMove :: IO (String, Move)
-makeUserMove = do
+getUserMove :: IO (String, Move)
+getUserMove = do
   putStrLn "Input coordinate x:"
   x <- getLine
   putStrLn "Input coordinate y:"
@@ -45,8 +45,8 @@ makeUserMove = do
   word <- getLine
   return (word, ((read x, read y), head letter))
 
-dictionary :: IO [String]
-dictionary = do
+readDictionary :: IO [String]
+readDictionary = do
   --  contents <- readFile "C:\\PROJECTS\\haskell\\blockhead-game\\src\\slova.txt"
   contents <- readFile "/Users/yaskovdev/dev/git_home/blockhead-game-haskell/src/slova.txt"
   return (splitOn "\n" contents)
@@ -117,8 +117,8 @@ pathToWord field = map (\(x, y) -> (field !! x) !! y)
 mkUniq :: Ord a => [a] -> [a]
 mkUniq = toList . fromList
 
-calculateScore :: [String] -> Int
-calculateScore ws = sum (map length ws)
+totalLettersIn :: [String] -> Int
+totalLettersIn ws = sum (map length ws)
 
 totalMoves :: Field -> Int
 totalMoves field = (length field - 1) * length (head field)
@@ -126,30 +126,30 @@ totalMoves field = (length field - 1) * length (head field)
 gameLoop :: Game -> IO ()
 gameLoop (_, field, _, _, userWords, computerWords, moves) | moves == totalMoves field = do
   putStrLn (intercalate "\n" field)
-  putStrLn ("Your score: " ++ show (calculateScore userWords))
-  putStrLn ("My score: " ++ show (calculateScore computerWords))
-gameLoop (d, field, True, initWord, userWords, computerWords, moves) = do
+  putStrLn ("Your score: " ++ show (totalLettersIn userWords))
+  putStrLn ("My score: " ++ show (totalLettersIn computerWords))
+gameLoop (dictionary, field, True, initWord, userWords, computerWords, moves) = do
   putStrLn "Your turn!"
   putStrLn (intercalate "\n" field)
-  (word, (cell, letter)) <- makeUserMove
-  gameLoop (d, replaceChar field cell letter, False, initWord, userWords ++ [word], computerWords, moves + 1)
-gameLoop (d, field, False, initWord, userWords, computerWords, moves) = do
+  (word, (cell, letter)) <- getUserMove
+  gameLoop (dictionary, replaceChar field cell letter, False, initWord, word : userWords, computerWords, moves + 1)
+gameLoop (dictionary, field, False, initWord, userWords, computerWords, moves) = do
   putStrLn "I am thinking..."
   let allWords = mkUniq (getWords field (getAvailableMoves field))
-  let realWords = filter (\(w, _) -> (w `elem` d) && (w `notElem` ([initWord] ++ userWords ++ computerWords))) allWords
+  let realWords = filter (\(w, _) -> (w `elem` dictionary) && (w `notElem` (initWord : userWords ++ computerWords))) allWords
   let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
   wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
   let oneOfLongestWord = sortedWords !! wordIndex
   let (word, (cell, letter)) = oneOfLongestWord
   let updatedField = replaceChar field cell letter
   putStrLn ("I picked word " ++ word)
-  gameLoop (d, updatedField, True, initWord, userWords, computerWords ++ [word], moves + 1)
+  gameLoop (dictionary, updatedField, True, initWord, userWords, word : computerWords, moves + 1)
 
 startGame :: IO ()
 startGame = do
-  d <- dictionary
-  let initWords = wordsOfLength 5 d
+  dictionary <- readDictionary
+  let initWords = wordsOfLength 5 dictionary
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let initWord = initWords !! initWordIndex
   let field = createField initWord
-  gameLoop (d, field, True, initWord, [], [], 0)
+  gameLoop (dictionary, field, True, initWord, [], [], 0)

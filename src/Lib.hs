@@ -5,6 +5,7 @@ module Lib (startGame) where
 import Data.List (intercalate, sortBy)
 import Data.List.Split
 import Data.Set (fromList, toList)
+import Paths_blockhead_game (getDataFileName)
 import System.Random
 
 type Field = [[Char]]
@@ -47,8 +48,8 @@ getUserMove = do
 
 readDictionary :: IO [String]
 readDictionary = do
-  --  contents <- readFile "C:\\PROJECTS\\haskell\\blockhead-game\\src\\slova.txt"
-  contents <- readFile "/Users/yaskovdev/dev/git_home/blockhead-game-haskell/src/slova.txt"
+  dictionaryFileName <- getDataFileName "dictionary.txt"
+  contents <- readFile dictionaryFileName
   return (splitOn "\n" contents)
 
 wordsOfLength :: Int -> [String] -> [String]

@@ -25,6 +25,9 @@ dependencies:
 - random
 - containers
 
+data-files:
+  - dictionary.txt
+
 ghc-options:
 - -Wall
 - -Wcompat

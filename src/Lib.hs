@@ -3,7 +3,7 @@ module Lib
   )
 where
 
-import Data.List (intercalate, sortBy)
+import Data.List (foldr, intercalate, sortBy)
 import Data.List.Split
 import Data.Set (fromList, toList)
 import System.Random
@@ -14,7 +14,7 @@ type Cell = (Int, Int)
 
 type Move = (Cell, Char)
 
-type Game = ([String], Field, Bool, String, [String], [String])
+type Game = ([String], Field, Bool, String, [String], [String], Int)
 
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 6
@@ -119,13 +119,20 @@ pathToWord field path = map (\(x, y) -> (field !! x) !! y) path
 mkUniq :: Ord a => [a] -> [a]
 mkUniq = toList . fromList
 
+calculateScore :: [String] -> Int
+calculateScore ws = sum (map length ws)
+
 gameLoop :: Game -> IO ()
-gameLoop (d, field, True, initWord, userWords, computerWords) = do
+gameLoop (_, field, _, _, userWords, computerWords, 20) = do
+  putStrLn (intercalate "\n" field)
+  putStrLn ("Your score: " ++ show (calculateScore userWords))
+  putStrLn ("My score: " ++ show (calculateScore computerWords))
+gameLoop (d, field, True, initWord, userWords, computerWords, moves) = do
   putStrLn "Your turn!"
   putStrLn (intercalate "\n" field)
   (word, (cell, letter)) <- makeUserMove
-  gameLoop (d, replaceChar field cell letter, False, initWord, userWords ++ [word], computerWords)
-gameLoop (d, field, False, initWord, userWords, computerWords) = do
+  gameLoop (d, replaceChar field cell letter, False, initWord, userWords ++ [word], computerWords, moves + 1)
+gameLoop (d, field, False, initWord, userWords, computerWords, moves) = do
   putStrLn "I am thinking..."
   let allWords = mkUniq (getWords field (getAvailableMoves field))
   let realWords = filter (\(w, _) -> (w `elem` d) && (w `notElem` ([initWord] ++ userWords ++ computerWords))) allWords
@@ -134,7 +141,7 @@ gameLoop (d, field, False, initWord, userWords, computerWords) = do
   let (word, (cell, letter)) = longestRealWord
   let updatedField = replaceChar field cell letter
   putStrLn ("I picked word " ++ word)
-  gameLoop (d, updatedField, True, initWord, userWords, computerWords ++ [word])
+  gameLoop (d, updatedField, True, initWord, userWords, computerWords ++ [word], moves + 1)
 
 startGame :: IO ()
 startGame = do
@@ -142,5 +149,5 @@ startGame = do
   let initWords = wordsOfLength 5 d
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let initWord = initWords !! initWordIndex
-  let field = replaceRow createEmptyField 2 initWord
-  gameLoop (d, field, True, initWord, [], [])
+  let field = createField initWord
+  gameLoop (d, field, True, initWord, [], [], 0)

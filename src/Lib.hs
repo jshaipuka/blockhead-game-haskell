@@ -34,7 +34,7 @@ replaceRow field x newRow = take x field ++ [newRow] ++ drop (x + 1) field
 replaceChar' :: [Char] -> Int -> Char -> [Char]
 replaceChar' field x letter = take x field ++ [letter] ++ drop (x + 1) field
 
-makeUserMove :: IO Move
+makeUserMove :: IO (String, Move)
 makeUserMove = do
   putStrLn "Input coordinate x:"
   x <- getLine
@@ -42,10 +42,9 @@ makeUserMove = do
   y <- getLine
   putStrLn "Input letter:"
   letter <- getLine
-  return ((read x, read y), head letter)
-
-makeComputerMove :: Field -> Field
-makeComputerMove field = field
+  putStrLn "Type your word:"
+  word <- getLine
+  return (word, ((read x, read y), head letter))
 
 dictionary :: IO [String]
 dictionary = do
@@ -124,18 +123,18 @@ gameLoop :: Game -> IO ()
 gameLoop (d, field, True, initWord, userWords, computerWords) = do
   putStrLn "Your turn!"
   putStrLn (intercalate "\n" field)
-  (cell, letter) <- makeUserMove
-  gameLoop (d, replaceChar field cell letter, False, initWord, userWords, computerWords)
+  (word, (cell, letter)) <- makeUserMove
+  gameLoop (d, replaceChar field cell letter, False, initWord, userWords ++ [word], computerWords)
 gameLoop (d, field, False, initWord, userWords, computerWords) = do
   putStrLn "I am thinking..."
   let allWords = mkUniq (getWords field (getAvailableMoves field))
-  let realWords = filter (\(w, _) -> w `elem` d) allWords
+  let realWords = filter (\(w, _) -> (w `elem` d) && (w `notElem` ([initWord] ++ userWords ++ computerWords))) allWords
   let sortedRealWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
   let longestRealWord = head sortedRealWords
   let (word, (cell, letter)) = longestRealWord
   let updatedField = replaceChar field cell letter
   putStrLn ("I picked word " ++ word)
-  gameLoop (d, updatedField, True, initWord, userWords, computerWords)
+  gameLoop (d, updatedField, True, initWord, userWords, computerWords ++ [word])
 
 startGame :: IO ()
 startGame = do
@@ -145,8 +144,3 @@ startGame = do
   let initWord = initWords !! initWordIndex
   let field = replaceRow createEmptyField 2 initWord
   gameLoop (d, field, True, initWord, [], [])
-  let allWords = mkUniq (getWords field (getAvailableMoves field))
-  -- TODO: turn the dictionary into a set to speedup searching. Or is Haskell doing that under the hood already?
-  let realWords = (filter (\(w, _) -> w `elem` d) allWords)
-  putStrLn ""
---  putStrLn (intercalate "\n" )

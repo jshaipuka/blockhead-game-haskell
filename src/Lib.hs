@@ -1,9 +1,8 @@
-module Lib
-  ( startGame,
-  )
-where
+{-# LANGUAGE TupleSections #-}
 
-import Data.List (foldr, intercalate, sortBy)
+module Lib (startGame) where
+
+import Data.List (intercalate, sortBy)
 import Data.List.Split
 import Data.Set (fromList, toList)
 import System.Random
@@ -60,7 +59,7 @@ getAvailableCells :: Field -> [Cell]
 getAvailableCells field = filterCells' field (allCells field)
 
 allCells :: Field -> [Cell]
-allCells field = concatMap (\i -> map (\j -> (i, j)) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
+allCells field = concatMap (\i -> map (i,) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
 
 cellsWithLetters :: Field -> [Cell]
 cellsWithLetters field = filter (hasLetter field) (allCells field)
@@ -99,10 +98,10 @@ alphabet :: [Char]
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
 
 getAvailableMoves :: Field -> [Move]
-getAvailableMoves field = concatMap (\cell -> map (\letter -> (cell, letter)) alphabet) (getAvailableCells field)
+getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) (getAvailableCells field)
 
 getWords :: Field -> [Move] -> [(String, Move)]
-getWords field moves = concatMap (getWords' field) moves
+getWords field = concatMap (getWords' field)
 
 getWords' :: Field -> Move -> [(String, Move)]
 getWords' field (cell, letter) = map (\path -> (pathToWord fieldAfterMove path, (cell, letter))) (getWords'' fieldAfterMove cell)
@@ -113,17 +112,19 @@ getWords'' :: Field -> Cell -> [[Cell]]
 getWords'' field updatedCell = filter (elem updatedCell) (concatMap (paths field) (cellsWithLetters field))
 
 pathToWord :: Field -> [Cell] -> String
-pathToWord field path = map (\(x, y) -> (field !! x) !! y) path
+pathToWord field = map (\(x, y) -> (field !! x) !! y)
 
--- TODO: filter out duplicates as early as possible
 mkUniq :: Ord a => [a] -> [a]
 mkUniq = toList . fromList
 
 calculateScore :: [String] -> Int
 calculateScore ws = sum (map length ws)
 
+totalMoves :: Field -> Int
+totalMoves field = (length field - 1) * length (head field)
+
 gameLoop :: Game -> IO ()
-gameLoop (_, field, _, _, userWords, computerWords, 20) = do
+gameLoop (_, field, _, _, userWords, computerWords, moves) | moves == totalMoves field = do
   putStrLn (intercalate "\n" field)
   putStrLn ("Your score: " ++ show (calculateScore userWords))
   putStrLn ("My score: " ++ show (calculateScore computerWords))
@@ -136,9 +137,10 @@ gameLoop (d, field, False, initWord, userWords, computerWords, moves) = do
   putStrLn "I am thinking..."
   let allWords = mkUniq (getWords field (getAvailableMoves field))
   let realWords = filter (\(w, _) -> (w `elem` d) && (w `notElem` ([initWord] ++ userWords ++ computerWords))) allWords
-  let sortedRealWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
-  let longestRealWord = head sortedRealWords
-  let (word, (cell, letter)) = longestRealWord
+  let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
+  wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
+  let oneOfLongestWord = sortedWords !! wordIndex
+  let (word, (cell, letter)) = oneOfLongestWord
   let updatedField = replaceChar field cell letter
   putStrLn ("I picked word " ++ word)
   gameLoop (d, updatedField, True, initWord, userWords, computerWords ++ [word], moves + 1)

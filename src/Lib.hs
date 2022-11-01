@@ -14,6 +14,9 @@ type Cell = (Int, Int)
 
 type Move = (Cell, Char)
 
+longestWordComputerCanFind :: Int
+longestWordComputerCanFind = 6
+
 createField :: String -> Field
 createField = replaceRow createEmptyField 2
 
@@ -86,7 +89,7 @@ paths field start = paths' field start [start] [start]
 
 paths' :: Field -> Cell -> [Cell] -> [Cell] -> [[Cell]]
 paths' field start visited pathSoFar =
-  pathSoFar : concatMap (\n -> paths' field n (visited ++ [n]) (pathSoFar ++ [n])) (reachable field start visited)
+  pathSoFar : if length pathSoFar < longestWordComputerCanFind then concatMap (\n -> paths' field n (visited ++ [n]) (pathSoFar ++ [n])) (reachable field start visited) else []
 
 alphabet :: [Char]
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
@@ -117,8 +120,20 @@ startGame = do
   d <- dictionary
   let initWords = wordsOfLength 5 d
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
-  let field = createField (initWords !! initWordIndex)
-  putStrLn (intercalate "\n" field)
-  let allWords = mkUniq (getWords field (getAvailableMoves field))
+  initWordIndex2 <- randomRIO (0, length initWords) :: IO Int
+  initWordIndex3 <- randomRIO (0, length initWords) :: IO Int
+  initWordIndex4 <- randomRIO (0, length initWords) :: IO Int
+  initWordIndex5 <- randomRIO (0, length initWords) :: IO Int
+  let field = replaceRow createEmptyField 2 (initWords !! initWordIndex)
+  let field2 = replaceRow field 1 (initWords !! initWordIndex2)
+  let field3 = replaceRow field2 3 (initWords !! initWordIndex3)
+  let field4 = replaceRow field3 4 (initWords !! initWordIndex4)
+  let field5 = replaceChar (replaceRow field4 0 (initWords !! initWordIndex5)) (0, 0) '.'
+  putStrLn "-----"
+  putStrLn (intercalate "\n" field5)
+  putStrLn "-----"
+  --  let l = maximum (map length d)
+  --  print l
+  let allWords = mkUniq (getWords field5 (getAvailableMoves field5))
   -- TODO: turn the dictionary into a set to speedup searching. Or is Haskell doing that under the hood already?
   putStrLn (intercalate "\n" (filter (`elem` d) allWords))

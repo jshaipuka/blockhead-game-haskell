@@ -3,7 +3,7 @@ module Lib
   )
 where
 
-import Data.List (intercalate)
+import Data.List (intercalate, sortBy)
 import Data.List.Split
 import Data.Set (fromList, toList)
 import System.Random
@@ -13,6 +13,8 @@ type Field = [[Char]]
 type Cell = (Int, Int)
 
 type Move = (Cell, Char)
+
+type Game = ([String], Field, Bool, String, [String], [String])
 
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 6
@@ -32,7 +34,7 @@ replaceRow field x newRow = take x field ++ [newRow] ++ drop (x + 1) field
 replaceChar' :: [Char] -> Int -> Char -> [Char]
 replaceChar' field x letter = take x field ++ [letter] ++ drop (x + 1) field
 
-makeUserMove :: IO (Int, Int, Char)
+makeUserMove :: IO Move
 makeUserMove = do
   putStrLn "Input coordinate x:"
   x <- getLine
@@ -40,7 +42,10 @@ makeUserMove = do
   y <- getLine
   putStrLn "Input letter:"
   letter <- getLine
-  return (read x, read y, head letter)
+  return ((read x, read y), head letter)
+
+makeComputerMove :: Field -> Field
+makeComputerMove field = field
 
 dictionary :: IO [String]
 dictionary = do
@@ -97,11 +102,11 @@ alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
 getAvailableMoves :: Field -> [Move]
 getAvailableMoves field = concatMap (\cell -> map (\letter -> (cell, letter)) alphabet) (getAvailableCells field)
 
-getWords :: Field -> [Move] -> [String]
+getWords :: Field -> [Move] -> [(String, Move)]
 getWords field moves = concatMap (getWords' field) moves
 
-getWords' :: Field -> Move -> [String]
-getWords' field (cell, letter) = map (pathToWord fieldAfterMove) (getWords'' fieldAfterMove cell)
+getWords' :: Field -> Move -> [(String, Move)]
+getWords' field (cell, letter) = map (\path -> (pathToWord fieldAfterMove path, (cell, letter))) (getWords'' fieldAfterMove cell)
   where
     fieldAfterMove = replaceChar field cell letter
 
@@ -115,25 +120,33 @@ pathToWord field path = map (\(x, y) -> (field !! x) !! y) path
 mkUniq :: Ord a => [a] -> [a]
 mkUniq = toList . fromList
 
+gameLoop :: Game -> IO ()
+gameLoop (d, field, True, initWord, userWords, computerWords) = do
+  putStrLn "Your turn!"
+  putStrLn (intercalate "\n" field)
+  (cell, letter) <- makeUserMove
+  gameLoop (d, replaceChar field cell letter, False, initWord, userWords, computerWords)
+gameLoop (d, field, False, initWord, userWords, computerWords) = do
+  putStrLn "I am thinking..."
+  let allWords = mkUniq (getWords field (getAvailableMoves field))
+  let realWords = filter (\(w, _) -> w `elem` d) allWords
+  let sortedRealWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
+  let longestRealWord = head sortedRealWords
+  let (word, (cell, letter)) = longestRealWord
+  let updatedField = replaceChar field cell letter
+  putStrLn ("I picked word " ++ word)
+  gameLoop (d, updatedField, True, initWord, userWords, computerWords)
+
 startGame :: IO ()
 startGame = do
   d <- dictionary
   let initWords = wordsOfLength 5 d
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
-  initWordIndex2 <- randomRIO (0, length initWords) :: IO Int
-  initWordIndex3 <- randomRIO (0, length initWords) :: IO Int
-  initWordIndex4 <- randomRIO (0, length initWords) :: IO Int
-  initWordIndex5 <- randomRIO (0, length initWords) :: IO Int
-  let field = replaceRow createEmptyField 2 (initWords !! initWordIndex)
-  let field2 = replaceRow field 1 (initWords !! initWordIndex2)
-  let field3 = replaceRow field2 3 (initWords !! initWordIndex3)
-  let field4 = replaceRow field3 4 (initWords !! initWordIndex4)
-  let field5 = replaceChar (replaceRow field4 0 (initWords !! initWordIndex5)) (0, 0) '.'
-  putStrLn "-----"
-  putStrLn (intercalate "\n" field5)
-  putStrLn "-----"
-  --  let l = maximum (map length d)
-  --  print l
-  let allWords = mkUniq (getWords field5 (getAvailableMoves field5))
+  let initWord = initWords !! initWordIndex
+  let field = replaceRow createEmptyField 2 initWord
+  gameLoop (d, field, True, initWord, [], [])
+  let allWords = mkUniq (getWords field (getAvailableMoves field))
   -- TODO: turn the dictionary into a set to speedup searching. Or is Haskell doing that under the hood already?
-  putStrLn (intercalate "\n" (filter (`elem` d) allWords))
+  let realWords = (filter (\(w, _) -> w `elem` d) allWords)
+  putStrLn ""
+--  putStrLn (intercalate "\n" )

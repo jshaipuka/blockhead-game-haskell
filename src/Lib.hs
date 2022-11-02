@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (startGame) where
+module Lib (Field, createEmptyField, startGame) where
 
 import Data.List (intercalate, sortBy)
 import Data.List.Split
@@ -14,7 +14,7 @@ type Cell = (Int, Int)
 
 type Move = (Cell, Char)
 
-type Game = (Set String, Field, Bool, Set String, [String], [String], Int)
+type Game = (Set String, Field, Bool, Set String, [String], [String])
 
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 8
@@ -53,11 +53,10 @@ readDictionary = do
   return (splitOn "\n" contents)
 
 wordsOfLength :: Int -> [String] -> [String]
-wordsOfLength _ [] = []
-wordsOfLength n (x : xs) = if length x == n then x : wordsOfLength n xs else wordsOfLength n xs
+wordsOfLength n = filter (\w -> length w == n)
 
 getAvailableCells :: Field -> [Cell]
-getAvailableCells field = filterCells' field (allCells field)
+getAvailableCells field = filterCells field (allCells field)
 
 allCells :: Field -> [Cell]
 allCells field = concatMap (\i -> map (i,) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
@@ -65,10 +64,8 @@ allCells field = concatMap (\i -> map (i,) [0 .. length (field !! i) - 1]) [0 ..
 cellsWithLetters :: Field -> [Cell]
 cellsWithLetters field = filter (hasLetter field) (allCells field)
 
-filterCells' :: Field -> [Cell] -> [Cell]
-filterCells' _ [] = []
-filterCells' field (candidate : candidates) =
-  if isEmpty field candidate && hasNeighboursWithLetter field candidate then candidate : filterCells' field candidates else filterCells' field candidates
+filterCells :: Field -> [Cell] -> [Cell]
+filterCells field = filter (\candidate -> isEmpty field candidate && hasNeighboursWithLetter field candidate)
 
 hasNeighboursWithLetter :: Field -> Cell -> Bool
 hasNeighboursWithLetter field cell = any (hasLetter field) (getNeighbours field cell)
@@ -102,7 +99,7 @@ getAvailableMoves :: Field -> [Move]
 getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) (getAvailableCells field)
 
 getWords :: Field -> [Move] -> [(String, Move)]
-getWords field = concatMap (getWords' field)
+getWords field moves = mkUniq (concatMap (getWords' field) moves)
 
 getWords' :: Field -> Move -> [(String, Move)]
 getWords' field (cell, letter) = map (\path -> (pathToWord fieldAfterMove path, (cell, letter))) (getWords'' fieldAfterMove cell)
@@ -125,18 +122,18 @@ totalMoves :: Field -> Int
 totalMoves field = (length field - 1) * length (head field)
 
 gameLoop :: Game -> IO ()
-gameLoop (_, field, _, _, userWords, computerWords, moves) | moves == totalMoves field = do
+gameLoop (_, field, _, foundWords, userWords, computerWords) | length foundWords == totalMoves field = do
   putStrLn (intercalate "\n" field)
   putStrLn ("Your score: " ++ show (totalLettersIn userWords))
   putStrLn ("My score: " ++ show (totalLettersIn computerWords))
-gameLoop (dictionary, field, True, foundWords, userWords, computerWords, moves) = do
+gameLoop (dictionary, field, True, foundWords, userWords, computerWords) = do
   putStrLn "Your turn!"
   putStrLn (intercalate "\n" field)
   (word, (cell, letter)) <- getUserMove
-  gameLoop (dictionary, replaceChar field cell letter, False, insert word foundWords, word : userWords, computerWords, moves + 1)
-gameLoop (dictionary, field, False, foundWords, userWords, computerWords, moves) = do
+  gameLoop (dictionary, replaceChar field cell letter, False, insert word foundWords, word : userWords, computerWords)
+gameLoop (dictionary, field, False, foundWords, userWords, computerWords) = do
   putStrLn "I am thinking..."
-  let allWords = mkUniq (getWords field (getAvailableMoves field))
+  let allWords = getWords field (getAvailableMoves field)
   let realWords = filter (\(w, _) -> member w dictionary && not (member w foundWords)) allWords
   let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
   wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
@@ -144,7 +141,7 @@ gameLoop (dictionary, field, False, foundWords, userWords, computerWords, moves)
   let (word, (cell, letter)) = oneOfLongestWord
   let updatedField = replaceChar field cell letter
   putStrLn ("I picked word " ++ word)
-  gameLoop (dictionary, updatedField, True, insert word foundWords, userWords, word : computerWords, moves + 1)
+  gameLoop (dictionary, updatedField, True, insert word foundWords, userWords, word : computerWords)
 
 startGame :: IO ()
 startGame = do
@@ -153,4 +150,4 @@ startGame = do
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let initWord = initWords !! initWordIndex
   let field = createField initWord
-  gameLoop (fromList dictionary, field, True, singleton initWord, [], [], 0)
+  gameLoop (fromList dictionary, field, True, singleton initWord, [], [])

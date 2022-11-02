@@ -22,6 +22,14 @@ Type `:quit` to exit once done.
 
 ## API
 
+### Create New Field
+
 ```shell
-curl -v --data '{ "field": [ ".....", ".....", "РТУТЬ", ".....", "....." ], "usedWords": [ "РТУТЬ" ] }' http://localhost:3000/api/move-requests
+curl -v http://localhost:3000/api/field
+```
+
+### Ask Computer To Make A Move
+
+```shell
+curl -v --data '{ "field": [ ".....", ".....", "СКУНС", ".....", "....." ], "usedWords": [ "СКУНС" ] }' http://localhost:3000/api/move-requests
 ```

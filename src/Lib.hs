@@ -4,7 +4,7 @@ module Lib (startGame) where
 
 import Data.List (intercalate, sortBy)
 import Data.List.Split
-import Data.Set (Set, fromList, insert, singleton, toList, member)
+import Data.Set (Set, fromList, insert, member, singleton, toList)
 import Paths_blockhead_game (getDataFileName)
 import System.Random
 
@@ -14,10 +14,10 @@ type Cell = (Int, Int)
 
 type Move = (Cell, Char)
 
-type Game = (Set String, Field, Bool, String, [String], [String], Int)
+type Game = (Set String, Field, Bool, Set String, [String], [String], Int)
 
 longestWordComputerCanFind :: Int
-longestWordComputerCanFind = 6
+longestWordComputerCanFind = 8
 
 createField :: String -> Field
 createField = replaceRow createEmptyField 2
@@ -129,22 +129,22 @@ gameLoop (_, field, _, _, userWords, computerWords, moves) | moves == totalMoves
   putStrLn (intercalate "\n" field)
   putStrLn ("Your score: " ++ show (totalLettersIn userWords))
   putStrLn ("My score: " ++ show (totalLettersIn computerWords))
-gameLoop (dictionary, field, True, initWord, userWords, computerWords, moves) = do
+gameLoop (dictionary, field, True, foundWords, userWords, computerWords, moves) = do
   putStrLn "Your turn!"
   putStrLn (intercalate "\n" field)
   (word, (cell, letter)) <- getUserMove
-  gameLoop (dictionary, replaceChar field cell letter, False, initWord, word : userWords, computerWords, moves + 1)
-gameLoop (dictionary, field, False, initWord, userWords, computerWords, moves) = do
+  gameLoop (dictionary, replaceChar field cell letter, False, insert word foundWords, word : userWords, computerWords, moves + 1)
+gameLoop (dictionary, field, False, foundWords, userWords, computerWords, moves) = do
   putStrLn "I am thinking..."
   let allWords = mkUniq (getWords field (getAvailableMoves field))
-  let realWords = filter (\(w, _) -> member w dictionary && (w `notElem` (initWord : userWords ++ computerWords))) allWords
+  let realWords = filter (\(w, _) -> member w dictionary && not (member w foundWords)) allWords
   let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
   wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
   let oneOfLongestWord = sortedWords !! wordIndex
   let (word, (cell, letter)) = oneOfLongestWord
   let updatedField = replaceChar field cell letter
   putStrLn ("I picked word " ++ word)
-  gameLoop (dictionary, updatedField, True, initWord, userWords, word : computerWords, moves + 1)
+  gameLoop (dictionary, updatedField, True, insert word foundWords, userWords, word : computerWords, moves + 1)
 
 startGame :: IO ()
 startGame = do
@@ -153,4 +153,4 @@ startGame = do
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let initWord = initWords !! initWordIndex
   let field = createField initWord
-  gameLoop (fromList dictionary, field, True, initWord, [], [], 0)
+  gameLoop (fromList dictionary, field, True, singleton initWord, [], [], 0)

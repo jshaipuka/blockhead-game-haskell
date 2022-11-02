@@ -46,6 +46,10 @@ getUserMove = do
   word <- getLine
   return (word, ((read x, read y), head letter))
 
+isValidMove :: Field -> Set String -> (String, Move) -> Bool
+isValidMove field foundWords (word, move) =
+  all (`elem` alphabet) word && not (word `member` foundWords) && (move `elem` getAvailableMoves field)
+
 readDictionary :: IO [String]
 readDictionary = do
   dictionaryFileName <- getDataFileName "dictionary.txt"
@@ -83,7 +87,7 @@ hasLetter field cell = not (isEmpty field cell)
 
 reachable :: Field -> Cell -> Set Cell -> [Cell]
 reachable field (x, y) visited =
-  filter (\(a, b) -> not (member (a, b) visited) && hasLetter field (a, b)) (getNeighbours field (x, y))
+  filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) (getNeighbours field (x, y))
 
 paths :: Field -> Cell -> [[Cell]]
 paths field start = paths' field start (singleton start) [start]
@@ -122,7 +126,7 @@ totalMoves :: Field -> Int
 totalMoves field = (length field - 1) * length (head field)
 
 gameLoop :: Game -> IO ()
-gameLoop (_, field, _, foundWords, userWords, computerWords) | length foundWords == totalMoves field = do
+gameLoop (_, field, _, foundWords, userWords, computerWords) | length foundWords - 1 == totalMoves field = do
   putStrLn (intercalate "\n" field)
   putStrLn ("Your score: " ++ show (totalLettersIn userWords))
   putStrLn ("My score: " ++ show (totalLettersIn computerWords))
@@ -130,11 +134,15 @@ gameLoop (dictionary, field, True, foundWords, userWords, computerWords) = do
   putStrLn "Your turn!"
   putStrLn (intercalate "\n" field)
   (word, (cell, letter)) <- getUserMove
-  gameLoop (dictionary, replaceChar field cell letter, False, insert word foundWords, word : userWords, computerWords)
+  if isValidMove field foundWords (word, (cell, letter))
+    then gameLoop (dictionary, replaceChar field cell letter, False, insert word foundWords, word : userWords, computerWords)
+    else do
+      putStrLn "Invalid input, try again"
+      gameLoop (dictionary, field, True, foundWords, userWords, computerWords)
 gameLoop (dictionary, field, False, foundWords, userWords, computerWords) = do
   putStrLn "I am thinking..."
   let allWords = getWords field (getAvailableMoves field)
-  let realWords = filter (\(w, _) -> member w dictionary && not (member w foundWords)) allWords
+  let realWords = filter (\(w, _) -> w `member` dictionary && not (w `member` foundWords)) allWords
   let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
   wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
   let oneOfLongestWord = sortedWords !! wordIndex

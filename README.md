@@ -23,5 +23,5 @@ Type `:quit` to exit once done.
 ## API
 
 ```shell
-curl -v --data '{ "field": [ ".....", ".....", ".....", ".....", "....." ], "move": "Test" }' http://localhost:3000/api/games
+curl -v --data '{ "field": [ ".....", ".....", "РТУТЬ", ".....", "....." ], "usedWords": [ "РТУТЬ" ] }' http://localhost:3000/api/move-requests
 ```

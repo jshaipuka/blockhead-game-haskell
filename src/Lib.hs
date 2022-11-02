@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createEmptyField, readDictionary, startGame, wordsOfLength, createField) where
+module Lib (Field, createEmptyField, readDictionary, startGame, wordsOfLength, createField, makeMove) where
 
 import Data.List (intercalate, sortBy)
 import Data.List.Split
@@ -124,6 +124,17 @@ totalLettersIn ws = sum (map length ws)
 
 totalMoves :: Field -> Int
 totalMoves field = (length field - 1) * length (head field)
+
+makeMove :: Set String -> [String] -> Field -> IO (Field, String, Move)
+makeMove dictionary usedWords field = do
+  let allWords = getWords field (getAvailableMoves field)
+  let realWords = filter (\(w, _) -> w `member` dictionary && (w `notElem` usedWords)) allWords
+  let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
+  wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
+  let oneOfLongestWord = sortedWords !! wordIndex
+  let (word, (cell, letter)) = oneOfLongestWord
+  let updatedField = replaceChar field cell letter
+  return (updatedField, word, (cell, letter))
 
 gameLoop :: Game -> IO ()
 gameLoop (_, field, _, foundWords, userWords, computerWords) | length foundWords - 1 == totalMoves field = do

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main (main) where
@@ -8,12 +9,11 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Set (fromList)
 import GHC.Generics
 import Lib
-import System.Random
 import Web.Scotty
 
 data MoveRequest = MoveRequest {field :: [String], usedWords :: [String]} deriving (Show, Generic)
 
-data MoveResponse = MoveResponse {updatedField :: [String], word :: String, x :: Int, y :: Int, letter :: String} deriving (Show, Generic)
+data MoveResponse = MoveResponse {updatedField :: [String], word :: String, x :: Int, y :: Int, letter :: Char} deriving (Show, Generic)
 
 instance ToJSON MoveRequest
 
@@ -23,21 +23,6 @@ instance ToJSON MoveResponse
 
 instance FromJSON MoveResponse
 
-extractField :: MoveRequest -> [String]
-extractField r@MoveRequest {field = answer} = answer
-
-extractUsedWords :: MoveRequest -> [String]
-extractUsedWords r@MoveRequest {usedWords = answer} = answer
-
---main = startGame
-
-createNewField :: [String] -> IO Field
-createNewField dictionary = do
-  let initWords = wordsOfLength 5 dictionary
-  initWordIndex <- randomRIO (0, length initWords) :: IO Int
-  let initWord = initWords !! initWordIndex
-  return (createField initWord)
-
 main :: IO ()
 main = do
   dictionary <- readDictionary
@@ -45,11 +30,9 @@ main = do
 
   scotty 3000 $ do
     get "/api/field" $ do
-      f <- liftIO (createNewField dictionary)
-      json f
+      field <- liftIO (createNewField dictionary)
+      json field
     post "/api/move-requests" $ do
-      moveRequest <- jsonData :: ActionM MoveRequest
-      let field = extractField moveRequest
-      let usedWords = extractUsedWords moveRequest
+      MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest
       (updatedField, word, ((x, y), letter)) <- liftIO (makeMove dictionarySet usedWords field)
-      json (MoveResponse updatedField word x y [letter])
+      json (MoveResponse updatedField word x y letter)

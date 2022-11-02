@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createEmptyField, readDictionary, startGame, wordsOfLength, createField, makeMove) where
+module Lib (Field, createEmptyField, readDictionary, startGame, wordsOfLength, createNewField, makeMove) where
 
 import Data.List (intercalate, sortBy)
 import Data.List.Split
@@ -18,6 +18,13 @@ type Game = (Set String, Field, Bool, Set String, [String], [String])
 
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 8
+
+createNewField :: [String] -> IO Field
+createNewField dictionary = do
+  let initWords = wordsOfLength 5 dictionary
+  initWordIndex <- randomRIO (0, length initWords) :: IO Int
+  let initWord = initWords !! initWordIndex
+  return (createField initWord)
 
 createField :: String -> Field
 createField = replaceRow createEmptyField 2
@@ -152,13 +159,7 @@ gameLoop (dictionary, field, True, foundWords, userWords, computerWords) = do
       gameLoop (dictionary, field, True, foundWords, userWords, computerWords)
 gameLoop (dictionary, field, False, foundWords, userWords, computerWords) = do
   putStrLn "I am thinking..."
-  let allWords = getWords field (getAvailableMoves field)
-  let realWords = filter (\(w, _) -> w `member` dictionary && not (w `member` foundWords)) allWords
-  let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
-  wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
-  let oneOfLongestWord = sortedWords !! wordIndex
-  let (word, (cell, letter)) = oneOfLongestWord
-  let updatedField = replaceChar field cell letter
+  (updatedField, word, _) <- makeMove dictionary (toList foundWords) field
   putStrLn ("I picked word " ++ word)
   gameLoop (dictionary, updatedField, True, insert word foundWords, userWords, word : computerWords)
 

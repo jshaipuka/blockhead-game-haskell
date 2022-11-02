@@ -14,13 +14,17 @@ type Cell = (Int, Int)
 
 type Move = (Cell, Char)
 
+-- | Should be in range from 0 to 9 (inclusively). The bigger the value the more difficult to play.
+difficulty :: Int
+difficulty = 4
+
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 8
 
 createNewField :: [String] -> IO Field
 createNewField dictionary = do
   let initWords = wordsOfLength 5 dictionary
-  initWordIndex <- randomRIO (0, length initWords) :: IO Int
+  initWordIndex <- randomRIO (0, length initWords - 1) :: IO Int
   let initWord = initWords !! initWordIndex
   return (createField initWord)
 
@@ -112,9 +116,9 @@ makeMove :: Set String -> [String] -> Field -> IO (Field, [Cell], String, Move)
 makeMove dictionary usedWords field = do
   let allWords = getWords field (getAvailableMoves field)
   let realWords = filter (\(_, w, _) -> w `member` dictionary && (w `notElem` usedWords)) allWords
-  let sortedWords = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) realWords
-  wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
-  let oneOfLongestWord = sortedWords !! wordIndex
+  let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) realWords
+  wordIndex <- randomRIO (0, min (9 - difficulty) (length longestWordsFirst - 1)) :: IO Int
+  let oneOfLongestWord = longestWordsFirst !! wordIndex
   let (path, word, (cell, letter)) = oneOfLongestWord
   let updatedField = replaceChar field cell letter
   return (updatedField, path, word, (cell, letter))

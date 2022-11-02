@@ -4,7 +4,7 @@ module Lib (startGame) where
 
 import Data.List (intercalate, sortBy)
 import Data.List.Split
-import Data.Set (fromList, toList)
+import Data.Set (Set, fromList, insert, singleton, toList, member)
 import Paths_blockhead_game (getDataFileName)
 import System.Random
 
@@ -14,7 +14,7 @@ type Cell = (Int, Int)
 
 type Move = (Cell, Char)
 
-type Game = ([String], Field, Bool, String, [String], [String], Int)
+type Game = (Set String, Field, Bool, String, [String], [String], Int)
 
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 6
@@ -84,16 +84,16 @@ isEmpty field (a, b) = (field !! a) !! b == '.'
 hasLetter :: Field -> Cell -> Bool
 hasLetter field cell = not (isEmpty field cell)
 
-reachable :: Field -> Cell -> [Cell] -> [Cell]
+reachable :: Field -> Cell -> Set Cell -> [Cell]
 reachable field (x, y) visited =
-  filter (\(a, b) -> notElem (a, b) visited && hasLetter field (a, b)) (getNeighbours field (x, y))
+  filter (\(a, b) -> not (member (a, b) visited) && hasLetter field (a, b)) (getNeighbours field (x, y))
 
 paths :: Field -> Cell -> [[Cell]]
-paths field start = paths' field start [start] [start]
+paths field start = paths' field start (singleton start) [start]
 
-paths' :: Field -> Cell -> [Cell] -> [Cell] -> [[Cell]]
+paths' :: Field -> Cell -> Set Cell -> [Cell] -> [[Cell]]
 paths' field start visited pathSoFar =
-  pathSoFar : if length pathSoFar < longestWordComputerCanFind then concatMap (\n -> paths' field n (visited ++ [n]) (pathSoFar ++ [n])) (reachable field start visited) else []
+  pathSoFar : if length pathSoFar < longestWordComputerCanFind then concatMap (\n -> paths' field n (insert n visited) (pathSoFar ++ [n])) (reachable field start visited) else []
 
 alphabet :: [Char]
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
@@ -137,7 +137,7 @@ gameLoop (dictionary, field, True, initWord, userWords, computerWords, moves) = 
 gameLoop (dictionary, field, False, initWord, userWords, computerWords, moves) = do
   putStrLn "I am thinking..."
   let allWords = mkUniq (getWords field (getAvailableMoves field))
-  let realWords = filter (\(w, _) -> (w `elem` dictionary) && (w `notElem` (initWord : userWords ++ computerWords))) allWords
+  let realWords = filter (\(w, _) -> member w dictionary && (w `notElem` (initWord : userWords ++ computerWords))) allWords
   let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
   wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
   let oneOfLongestWord = sortedWords !! wordIndex
@@ -153,4 +153,4 @@ startGame = do
   initWordIndex <- randomRIO (0, length initWords) :: IO Int
   let initWord = initWords !! initWordIndex
   let field = createField initWord
-  gameLoop (dictionary, field, True, initWord, [], [], 0)
+  gameLoop (fromList dictionary, field, True, initWord, [], [], 0)

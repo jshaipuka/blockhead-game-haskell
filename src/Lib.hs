@@ -1,8 +1,8 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createEmptyField, readDictionary, startGame, wordsOfLength, createNewField, makeMove) where
+module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove) where
 
-import Data.List (intercalate, sortBy)
+import Data.List (sortBy)
 import Data.List.Split
 import Data.Set (Set, fromList, insert, member, singleton, toList)
 import Paths_blockhead_game (getDataFileName)
@@ -13,8 +13,6 @@ type Field = [[Char]]
 type Cell = (Int, Int)
 
 type Move = (Cell, Char)
-
-type Game = (Set String, Field, Bool, Set String, [String], [String])
 
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 8
@@ -40,22 +38,6 @@ replaceRow field x newRow = take x field ++ [newRow] ++ drop (x + 1) field
 
 replaceChar' :: [Char] -> Int -> Char -> [Char]
 replaceChar' field x letter = take x field ++ [letter] ++ drop (x + 1) field
-
-getUserMove :: IO (String, Move)
-getUserMove = do
-  putStrLn "Input coordinate x:"
-  x <- getLine
-  putStrLn "Input coordinate y:"
-  y <- getLine
-  putStrLn "Input letter:"
-  letter <- getLine
-  putStrLn "Type your word:"
-  word <- getLine
-  return (word, ((read x, read y), head letter))
-
-isValidMove :: Field -> Set String -> (String, Move) -> Bool
-isValidMove field foundWords (word, move) =
-  all (`elem` alphabet) word && not (word `member` foundWords) && (move `elem` getAvailableMoves field)
 
 readDictionary :: IO [String]
 readDictionary = do
@@ -109,11 +91,11 @@ alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
 getAvailableMoves :: Field -> [Move]
 getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) (getAvailableCells field)
 
-getWords :: Field -> [Move] -> [(String, Move)]
+getWords :: Field -> [Move] -> [([Cell], String, Move)]
 getWords field moves = mkUniq (concatMap (getWords' field) moves)
 
-getWords' :: Field -> Move -> [(String, Move)]
-getWords' field (cell, letter) = map (\path -> (pathToWord fieldAfterMove path, (cell, letter))) (getWords'' fieldAfterMove cell)
+getWords' :: Field -> Move -> [([Cell], String, Move)]
+getWords' field (cell, letter) = map (\path -> (path, pathToWord fieldAfterMove path, (cell, letter))) (getWords'' fieldAfterMove cell)
   where
     fieldAfterMove = replaceChar field cell letter
 
@@ -126,48 +108,13 @@ pathToWord field = map (\(x, y) -> (field !! x) !! y)
 mkUniq :: Ord a => [a] -> [a]
 mkUniq = toList . fromList
 
-totalLettersIn :: [String] -> Int
-totalLettersIn ws = sum (map length ws)
-
-totalMoves :: Field -> Int
-totalMoves field = (length field - 1) * length (head field)
-
-makeMove :: Set String -> [String] -> Field -> IO (Field, String, Move)
+makeMove :: Set String -> [String] -> Field -> IO (Field, [Cell], String, Move)
 makeMove dictionary usedWords field = do
   let allWords = getWords field (getAvailableMoves field)
-  let realWords = filter (\(w, _) -> w `member` dictionary && (w `notElem` usedWords)) allWords
-  let sortedWords = sortBy (\(a, _) (b, _) -> compare (length b) (length a)) realWords
+  let realWords = filter (\(_, w, _) -> w `member` dictionary && (w `notElem` usedWords)) allWords
+  let sortedWords = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) realWords
   wordIndex <- randomRIO (0, min 5 (length sortedWords)) :: IO Int
   let oneOfLongestWord = sortedWords !! wordIndex
-  let (word, (cell, letter)) = oneOfLongestWord
+  let (path, word, (cell, letter)) = oneOfLongestWord
   let updatedField = replaceChar field cell letter
-  return (updatedField, word, (cell, letter))
-
-gameLoop :: Game -> IO ()
-gameLoop (_, field, _, foundWords, userWords, computerWords) | length foundWords - 1 == totalMoves field = do
-  putStrLn (intercalate "\n" field)
-  putStrLn ("Your score: " ++ show (totalLettersIn userWords))
-  putStrLn ("My score: " ++ show (totalLettersIn computerWords))
-gameLoop (dictionary, field, True, foundWords, userWords, computerWords) = do
-  putStrLn "Your turn!"
-  putStrLn (intercalate "\n" field)
-  (word, (cell, letter)) <- getUserMove
-  if isValidMove field foundWords (word, (cell, letter))
-    then gameLoop (dictionary, replaceChar field cell letter, False, insert word foundWords, word : userWords, computerWords)
-    else do
-      putStrLn "Invalid input, try again"
-      gameLoop (dictionary, field, True, foundWords, userWords, computerWords)
-gameLoop (dictionary, field, False, foundWords, userWords, computerWords) = do
-  putStrLn "I am thinking..."
-  (updatedField, word, _) <- makeMove dictionary (toList foundWords) field
-  putStrLn ("I picked word " ++ word)
-  gameLoop (dictionary, updatedField, True, insert word foundWords, userWords, word : computerWords)
-
-startGame :: IO ()
-startGame = do
-  dictionary <- readDictionary
-  let initWords = wordsOfLength 5 dictionary
-  initWordIndex <- randomRIO (0, length initWords) :: IO Int
-  let initWord = initWords !! initWordIndex
-  let field = createField initWord
-  gameLoop (fromList dictionary, field, True, singleton initWord, [], [])
+  return (updatedField, path, word, (cell, letter))

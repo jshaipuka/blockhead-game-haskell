@@ -13,7 +13,7 @@ import Web.Scotty
 
 data MoveRequest = MoveRequest {field :: [String], usedWords :: [String]} deriving (Show, Generic)
 
-data MoveResponse = MoveResponse {updatedField :: [String], word :: String, x :: Int, y :: Int, letter :: Char} deriving (Show, Generic)
+data MoveResponse = MoveResponse {updatedField :: [String], path :: [(Int, Int)], word :: String, cell :: (Int, Int), letter :: Char} deriving (Show, Generic)
 
 instance ToJSON MoveRequest
 
@@ -34,5 +34,5 @@ main = do
       json field
     post "/api/move-requests" $ do
       MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest
-      (updatedField, word, ((x, y), letter)) <- liftIO (makeMove dictionarySet usedWords field)
-      json (MoveResponse updatedField word x y letter)
+      (updatedField, path, word, (cell, letter)) <- liftIO (makeMove dictionarySet usedWords field)
+      json (MoveResponse updatedField path word cell letter)

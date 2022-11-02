@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createEmptyField, startGame) where
+module Lib (Field, createEmptyField, readDictionary, startGame, wordsOfLength, createField) where
 
 import Data.List (intercalate, sortBy)
 import Data.List.Split

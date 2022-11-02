@@ -26,6 +26,7 @@ dependencies:
 - containers
 - scotty
 - text
+- aeson
 
 data-files:
   - dictionary.txt

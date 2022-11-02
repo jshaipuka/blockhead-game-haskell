@@ -19,3 +19,9 @@ stack ghci --ghci-options src/Lib.hs
 ```
 
 Type `:quit` to exit once done.
+
+## API
+
+```shell
+curl -v --data '{ "field": [ ".....", ".....", ".....", ".....", "....." ], "move": "Test" }' http://localhost:3000/api/games
+```

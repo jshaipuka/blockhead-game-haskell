@@ -24,6 +24,8 @@ dependencies:
 - split
 - random
 - containers
+- scotty
+- text
 
 data-files:
   - dictionary.txt

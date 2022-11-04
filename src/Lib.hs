@@ -12,6 +12,8 @@ type Field = [[Char]]
 
 type Cell = (Int, Int)
 
+type Path = [Cell]
+
 type Move = (Cell, Char)
 
 -- | Should be in range from 0 to 9 (inclusively). The bigger the value the more difficult to play.
@@ -35,7 +37,7 @@ createEmptyField :: Field
 createEmptyField = replicate 5 (replicate 5 '.')
 
 replaceChar :: Field -> Cell -> Char -> Field
-replaceChar field (x, y) letter = replaceRow field x (replaceChar' (field !! x) y letter)
+replaceChar field (x, y) letter = replaceRow field x $ replaceChar' (field !! x) y letter
 
 replaceRow :: Field -> Int -> [Char] -> Field
 replaceRow field x newRow = take x field ++ [newRow] ++ drop (x + 1) field
@@ -50,7 +52,7 @@ readDictionary = do
   return (splitOn "\n" contents)
 
 wordsOfLength :: Int -> [String] -> [String]
-wordsOfLength n = filter (\w -> length w == n)
+wordsOfLength n = filter $ \w -> length w == n
 
 getAvailableCells :: Field -> [Cell]
 getAvailableCells field = filterCells field (allCells field)
@@ -62,10 +64,10 @@ cellsWithLetters :: Field -> [Cell]
 cellsWithLetters field = filter (hasLetter field) (allCells field)
 
 filterCells :: Field -> [Cell] -> [Cell]
-filterCells field = filter (\candidate -> isEmpty field candidate && hasNeighboursWithLetter field candidate)
+filterCells field = filter $ \candidate -> isEmpty field candidate && hasNeighboursWithLetter field candidate
 
 hasNeighboursWithLetter :: Field -> Cell -> Bool
-hasNeighboursWithLetter field cell = any (hasLetter field) (getNeighbours field cell)
+hasNeighboursWithLetter field cell = any (hasLetter field) $ getNeighbours field cell
 
 getNeighbours :: Field -> Cell -> [Cell]
 getNeighbours field (x, y) = filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a)) neighbours
@@ -82,12 +84,12 @@ reachable :: Field -> Cell -> Set Cell -> [Cell]
 reachable field (x, y) visited =
   filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) (getNeighbours field (x, y))
 
-paths :: Field -> Cell -> [[Cell]]
+paths :: Field -> Cell -> [Path]
 paths field start = paths' field start (singleton start) [start]
 
-paths' :: Field -> Cell -> Set Cell -> [Cell] -> [[Cell]]
+paths' :: Field -> Cell -> Set Cell -> Path -> [Path]
 paths' field start visited pathSoFar =
-  pathSoFar : if length pathSoFar < longestWordComputerCanFind then concatMap (\n -> paths' field n (insert n visited) (pathSoFar ++ [n])) (reachable field start visited) else []
+  pathSoFar : if length pathSoFar < longestWordComputerCanFind then concatMap (\n -> paths' field n (insert n visited) (pathSoFar ++ [n])) $ reachable field start visited else []
 
 alphabet :: [Char]
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
@@ -95,26 +97,29 @@ alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
 getAvailableMoves :: Field -> [Move]
 getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) (getAvailableCells field)
 
-getWords :: Field -> [Move] -> [([Cell], String, Move)]
-getWords field moves = mkUniq (concatMap (getWords' field) moves)
+getWords :: Field -> [(Path, String, Move)]
+getWords field = getWords' field (getAvailableMoves field)
 
-getWords' :: Field -> Move -> [([Cell], String, Move)]
-getWords' field (cell, letter) = map (\path -> (path, pathToWord fieldAfterMove path, (cell, letter))) (getWords'' fieldAfterMove cell)
+getWords' :: Field -> [Move] -> [(Path, String, Move)]
+getWords' field moves = mkUniq $ concatMap (getWords'' field) moves
+
+getWords'' :: Field -> Move -> [(Path, String, Move)]
+getWords'' field (cell, letter) = map (\path -> (path, pathToWord fieldAfterMove path, (cell, letter))) (getWords''' fieldAfterMove cell)
   where
     fieldAfterMove = replaceChar field cell letter
 
-getWords'' :: Field -> Cell -> [[Cell]]
-getWords'' field updatedCell = filter (elem updatedCell) (concatMap (paths field) (cellsWithLetters field))
+getWords''' :: Field -> Cell -> [Path]
+getWords''' field updatedCell = filter (elem updatedCell) $ concatMap (paths field) (cellsWithLetters field)
 
-pathToWord :: Field -> [Cell] -> String
-pathToWord field = map (\(x, y) -> (field !! x) !! y)
+pathToWord :: Field -> Path -> String
+pathToWord field = map $ \(x, y) -> (field !! x) !! y
 
 mkUniq :: Ord a => [a] -> [a]
 mkUniq = toList . fromList
 
-makeMove :: Set String -> [String] -> Field -> IO (Field, [Cell], String, Move)
+makeMove :: Set String -> [String] -> Field -> IO (Field, Path, String, Move)
 makeMove dictionary usedWords field = do
-  let allWords = getWords field (getAvailableMoves field)
+  let allWords = getWords field
   let realWords = filter (\(_, w, _) -> w `member` dictionary && (w `notElem` usedWords)) allWords
   let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) realWords
   wordIndex <- randomRIO (0, min (9 - difficulty) (length longestWordsFirst - 1)) :: IO Int

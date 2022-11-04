@@ -27,7 +27,7 @@ Type `:quit` to exit once done.
 #### Request
 
 ```shell
-curl -v http://localhost:3000/api/field
+curl -v http://localhost:3001/api/field
 ```
 
 #### Response
@@ -47,7 +47,7 @@ curl -v http://localhost:3000/api/field
 #### Request
 
 ```shell
-curl -v --data '{ "field": [ ".....", ".....", "БАЛДА", ".....", "....." ], "usedWords": [ "БАЛДА" ] }' http://localhost:3000/api/move-requests
+curl -v --data '{ "field": [ ".....", ".....", "БАЛДА", ".....", "....." ], "usedWords": [ "БАЛДА" ] }' http://localhost:3001/api/move-requests
 ```
 
 #### Response
@@ -77,11 +77,11 @@ curl -v --data '{ "field": [ ".....", ".....", "БАЛДА", ".....", "....." ],
 ### Request
 
 ```shell
-curl -v --data '{ "field": [ "Т....", "ЕГТЫН", "БАЛДА", ".ФЛАХ", "....." ], "usedWords": [ "БАЛДА", "ФАЛДА", "БАЛЛ", "БАЛТ", "ГАЛЛ", "БЕГА", "БАЛЛАДА", "БАГЕТ", "АЛЛАХ", "НАХАЛ", "АЛТЫН" ] }' http://localhost:3000/api/move-requests
+curl -v --data '{ "field": [ "Т....", "ЕГТЫН", "БАЛДА", ".ФЛАХ", "....." ], "usedWords": [ "БАЛДА", "ФАЛДА", "БАЛЛ", "БАЛТ", "ГАЛЛ", "БЕГА", "БАЛЛАДА", "БАГЕТ", "АЛЛАХ", "НАХАЛ", "АЛТЫН" ] }' http://localhost:3001/api/move-requests
 ```
 
 ### Request
 
 ```shell
-curl -v --data '{ "field": [ "ТОНЯЯ", "ЕГТЫН", "БАЛДА", "ЕФЛАХ", "ДОПТА" ], "usedWords": [ "БАЛДА", "ФАЛДА", "БАЛЛ", "БАЛТ", "ГАЛЛ", "БЕГА", "БАЛЛАДА", "БАГЕТ", "АЛЛАХ", "НАХАЛ", "АЛТЫН", "ФАГОТ", "БЕТОН", "ПЛАХА", "ПТАХА", "ПЛАТА", "ОПЛАТА", "ДОПЛАТА", "ДЕБЕТ", "ТОНЯ", "ДЫНЯ" ] }' http://localhost:3000/api/move-requests
+curl -v --data '{ "field": [ "ТОНЯЯ", "ЕГТЫН", "БАЛДА", "ЕФЛАХ", "ДОПТА" ], "usedWords": [ "БАЛДА", "ФАЛДА", "БАЛЛ", "БАЛТ", "ГАЛЛ", "БЕГА", "БАЛЛАДА", "БАГЕТ", "АЛЛАХ", "НАХАЛ", "АЛТЫН", "ФАГОТ", "БЕТОН", "ПЛАХА", "ПТАХА", "ПЛАТА", "ОПЛАТА", "ДОПЛАТА", "ДЕБЕТ", "ТОНЯ", "ДЫНЯ" ] }' http://localhost:3001/api/move-requests
 ```

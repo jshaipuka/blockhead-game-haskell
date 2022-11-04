@@ -18,7 +18,7 @@ type Move = (Cell, Char)
 
 -- | Should be in range from 0 to 9 (inclusively). The bigger the value the more difficult to play.
 difficulty :: Int
-difficulty = 4
+difficulty = 3
 
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 8

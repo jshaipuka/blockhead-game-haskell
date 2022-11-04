@@ -27,6 +27,7 @@ dependencies:
 - scotty
 - text
 - aeson
+- wai-cors
 
 data-files:
   - dictionary.txt

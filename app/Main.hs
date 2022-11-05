@@ -39,9 +39,9 @@ main = do
   scotty 8080 $ do
     middleware allowCorsWithPreflight
     get "/api/field" $ do
-      field <- liftIO (createNewField dictionary)
+      field <- liftIO $ createNewField dictionary
       json field
     post "/api/move-requests" $ do
       MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest
-      (updatedField, path, word, (cell, letter)) <- liftIO (makeMove dictionarySet usedWords field)
-      json (MoveResponse updatedField path word cell letter)
+      (updatedField, path, word, (cell, letter)) <- liftIO $ makeMove dictionarySet usedWords field
+      json $ MoveResponse updatedField path word cell letter

@@ -108,6 +108,14 @@ curl -v --data '{"field":["ЬТЗСР","ЭСАПО","ГОГОТ","ТФАРТ",".
 
 ### Request
 
+There are empty cells but computer cannot find any word, another example.
+
+```shell
+curl -v --data  '{"field":["ТЬ.ЬН","ОНВДА","ЗАВОЗ","АГАЙЮ","ВАНСО"],"usedWords":["ЗАВОЗ","НАВОЗ","ЗАВОД","ЗАВОДЬ","ВДОВА","ДОЗА","НАВОЙ","НАДОЙ","ЗОНА","АЗОТ","ГАЗОН","ВАЗА","НАВАГА","ВАЗОН","ГАВАНЬ","НАГАН","АГАВА","АВАНС","ЮЗ","СОЮЗ"]}' http://localhost:8080/api/move-requests
+```
+
+### Request
+
 There are no empty cells.
 
 ```shell

@@ -27,7 +27,7 @@ Type `:quit` to exit once done.
 #### Request
 
 ```shell
-curl -v http://localhost:8080/api/field
+curl -v http://localhost:8080/api/field/5
 ```
 
 #### Response

@@ -38,8 +38,9 @@ main = do
 
   scotty 8080 $ do
     middleware allowCorsWithPreflight
-    get "/api/field" $ do
-      field <- liftIO $ createNewField dictionary
+    get "/api/field/:size" $ do
+      size <- param "size"
+      field <- liftIO $ createNewField dictionary size
       json field
     post "/api/move-requests" $ do
       MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest

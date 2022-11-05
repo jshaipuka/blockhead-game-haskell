@@ -23,18 +23,18 @@ difficulty = 3
 longestWordComputerCanFind :: Int
 longestWordComputerCanFind = 8
 
-createNewField :: [String] -> IO Field
-createNewField dictionary = do
-  let initWords = wordsOfLength 5 dictionary
+createNewField :: [String] -> Int -> IO Field
+createNewField dictionary size = do
+  let initWords = wordsOfLength size dictionary
   initWordIndex <- randomRIO (0, length initWords - 1) :: IO Int
   let initWord = initWords !! initWordIndex
-  return (createField initWord)
+  return (createField size initWord)
 
-createField :: String -> Field
-createField = replaceRow createEmptyField 2
+createField :: Int -> String -> Field
+createField size = replaceRow (createEmptyField size) $ size `div` 2
 
-createEmptyField :: Field
-createEmptyField = replicate 5 (replicate 5 '.')
+createEmptyField :: Int -> Field
+createEmptyField size = replicate size $ replicate size '.'
 
 replaceChar :: Field -> Cell -> Char -> Field
 replaceChar field (x, y) letter = replaceRow field x $ replaceChar' (field !! x) y letter
@@ -109,7 +109,7 @@ getWords'' field (cell, letter) = map (\path -> (path, pathToWord fieldAfterMove
     fieldAfterMove = replaceChar field cell letter
 
 getWords''' :: Field -> Cell -> [Path]
-getWords''' field updatedCell = filter (elem updatedCell) $ concatMap (paths field) (cellsWithLetters field)
+getWords''' field updatedCell = filter (elem updatedCell) $ concatMap (paths field) $ cellsWithLetters field
 
 pathToWord :: Field -> Path -> String
 pathToWord field = map $ \(x, y) -> (field !! x) !! y
@@ -125,7 +125,7 @@ makeMove dictionary usedWords field = do
       return (False, field, [], "", ((0, 0), ' '))
     else do
       let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) foundWords
-      wordIndex <- randomRIO (0, min (9 - difficulty) (length longestWordsFirst - 1)) :: IO Int
+      wordIndex <- randomRIO (0, min (9 - difficulty) $ length longestWordsFirst - 1) :: IO Int
       let oneOfLongestWord = longestWordsFirst !! wordIndex
       let (path, word, (cell, letter)) = oneOfLongestWord
       let updatedField = replaceChar field cell letter

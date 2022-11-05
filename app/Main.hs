@@ -35,6 +35,7 @@ main :: IO ()
 main = do
   dictionary <- readDictionary
   let dictionarySet = fromList dictionary
+  let prefixSet = toPrefixDictionarySet dictionary
 
   scotty 8080 $ do
     middleware allowCorsWithPreflight
@@ -44,5 +45,5 @@ main = do
       json field
     post "/api/move-requests" $ do
       MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest
-      (success, updatedField, path, word, (cell, letter)) <- liftIO $ makeMove dictionarySet usedWords field
+      (success, updatedField, path, word, (cell, letter)) <- liftIO $ makeMove prefixSet dictionarySet usedWords field
       json $ MoveResponse success updatedField path word cell letter

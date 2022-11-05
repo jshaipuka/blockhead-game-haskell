@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove) where
+module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove, toPrefixDictionarySet) where
 
 import Data.HashSet (HashSet, fromList, insert, member, singleton, toList)
 import Data.Hashable (Hashable)
@@ -14,6 +14,8 @@ type Field = [[Char]]
 type Cell = (Int, Int)
 
 type Path = [Cell]
+
+type WordPath = (String, Path)
 
 type Move = (Cell, Char)
 
@@ -52,6 +54,12 @@ readDictionary = do
   contents <- readFile dictionaryFileName
   return (splitOn "\n" contents)
 
+toPrefixDictionarySet :: [String] -> HashSet String
+toPrefixDictionarySet dictionary = fromList $ concatMap prefixes dictionary
+
+prefixes :: String -> [String]
+prefixes w = map (`take` w) [1 .. length w]
+
 wordsOfLength :: Int -> [String] -> [String]
 wordsOfLength n = filter $ \w -> length w == n
 
@@ -62,7 +70,7 @@ allCells :: Field -> [Cell]
 allCells field = concatMap (\i -> map (i,) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
 
 cellsWithLetters :: Field -> [Cell]
-cellsWithLetters field = filter (hasLetter field) (allCells field)
+cellsWithLetters field = filter (hasLetter field) $ allCells field
 
 filterCells :: Field -> [Cell] -> [Cell]
 filterCells field = filter $ \candidate -> isEmpty field candidate && hasNeighboursWithLetter field candidate
@@ -83,34 +91,37 @@ hasLetter field cell = not (isEmpty field cell)
 
 reachable :: Field -> Cell -> HashSet Cell -> [Cell]
 reachable field (x, y) visited =
-  filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) (getNeighbours field (x, y))
+  filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) $ getNeighbours field (x, y)
 
-paths :: Field -> Cell -> [Path]
-paths field start = paths' field start (singleton start) [start]
+paths :: HashSet String -> Field -> Cell -> [WordPath]
+paths prefixSet field start = paths' prefixSet field start (singleton start) (pathToWord field [start], [start])
 
-paths' :: Field -> Cell -> HashSet Cell -> Path -> [Path]
-paths' field start visited pathSoFar =
-  pathSoFar : if length pathSoFar < longestWordComputerCanFind then concatMap (\n -> paths' field n (insert n visited) (pathSoFar ++ [n])) $ reachable field start visited else []
+paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
+paths' prefixSet field start visited pathSoFar =
+  pathSoFar :
+  if length pathSoFar < longestWordComputerCanFind && fst pathSoFar `member` prefixSet
+    then concatMap (\n -> paths' prefixSet field n (n `insert` visited) (pathToWord field (snd pathSoFar ++ [n]), snd pathSoFar ++ [n])) $ reachable field start visited
+    else []
 
-alphabet :: [Char]
+alphabet :: String
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
 
 getAvailableMoves :: Field -> [Move]
 getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) $ getAvailableCells field
 
-getWords :: Field -> [(Path, String, Move)]
-getWords field = getWords' field (getAvailableMoves field)
+getWords :: HashSet String -> Field -> [(Path, String, Move)]
+getWords prefixSet field = getWords' prefixSet field (getAvailableMoves field)
 
-getWords' :: Field -> [Move] -> [(Path, String, Move)]
-getWords' field moves = mkUniq $ concatMap (getWords'' field) moves
+getWords' :: HashSet String -> Field -> [Move] -> [(Path, String, Move)]
+getWords' prefixSet field moves = mkUniq $ concatMap (getWords'' prefixSet field) moves
 
-getWords'' :: Field -> Move -> [(Path, String, Move)]
-getWords'' field (cell, letter) = map (\path -> (path, pathToWord fieldAfterMove path, (cell, letter))) (getWords''' fieldAfterMove cell)
+getWords'' :: HashSet String -> Field -> Move -> [(Path, String, Move)]
+getWords'' prefixSet field (cell, letter) = map (\(word, path) -> (path, word, (cell, letter))) (getWords''' prefixSet fieldAfterMove cell)
   where
     fieldAfterMove = replaceChar field cell letter
 
-getWords''' :: Field -> Cell -> [Path]
-getWords''' field updatedCell = filter (elem updatedCell) $ concatMap (paths field) $ cellsWithLetters field
+getWords''' :: HashSet String -> Field -> Cell -> [WordPath]
+getWords''' prefixSet field updatedCell = filter (\(_, path) -> updatedCell `elem` path) $ concatMap (paths prefixSet field) $ cellsWithLetters field
 
 pathToWord :: Field -> Path -> String
 pathToWord field = map $ \(x, y) -> (field !! x) !! y
@@ -118,9 +129,9 @@ pathToWord field = map $ \(x, y) -> (field !! x) !! y
 mkUniq :: (Eq a, Hashable a) => [a] -> [a]
 mkUniq = toList . fromList
 
-makeMove :: HashSet String -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
-makeMove dictionarySet usedWords field = do
-  let foundWords = filter (\(_, w, _) -> w `member` dictionarySet && (w `notElem` usedWords)) $ getWords field
+makeMove :: HashSet String -> HashSet String -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
+makeMove prefixSet dictionarySet usedWords field = do
+  let foundWords = filter (\(_, w, _) -> w `member` dictionarySet && (w `notElem` usedWords)) $ getWords prefixSet field
   if null foundWords
     then do
       return (False, field, [], "", ((0, 0), ' '))

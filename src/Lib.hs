@@ -2,9 +2,10 @@
 
 module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove) where
 
+import Data.HashSet (HashSet, fromList, insert, member, singleton, toList)
+import Data.Hashable (Hashable)
 import Data.List (sortBy)
 import Data.List.Split
-import Data.Set (Set, fromList, insert, member, singleton, toList)
 import Paths_blockhead_game (getDataFileName)
 import System.Random
 
@@ -80,14 +81,14 @@ isEmpty field (a, b) = (field !! a) !! b == '.'
 hasLetter :: Field -> Cell -> Bool
 hasLetter field cell = not (isEmpty field cell)
 
-reachable :: Field -> Cell -> Set Cell -> [Cell]
+reachable :: Field -> Cell -> HashSet Cell -> [Cell]
 reachable field (x, y) visited =
   filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) (getNeighbours field (x, y))
 
 paths :: Field -> Cell -> [Path]
 paths field start = paths' field start (singleton start) [start]
 
-paths' :: Field -> Cell -> Set Cell -> Path -> [Path]
+paths' :: Field -> Cell -> HashSet Cell -> Path -> [Path]
 paths' field start visited pathSoFar =
   pathSoFar : if length pathSoFar < longestWordComputerCanFind then concatMap (\n -> paths' field n (insert n visited) (pathSoFar ++ [n])) $ reachable field start visited else []
 
@@ -114,12 +115,12 @@ getWords''' field updatedCell = filter (elem updatedCell) $ concatMap (paths fie
 pathToWord :: Field -> Path -> String
 pathToWord field = map $ \(x, y) -> (field !! x) !! y
 
-mkUniq :: Ord a => [a] -> [a]
+mkUniq :: (Eq a, Hashable a) => [a] -> [a]
 mkUniq = toList . fromList
 
-makeMove :: Set String -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
-makeMove dictionary usedWords field = do
-  let foundWords = filter (\(_, w, _) -> w `member` dictionary && (w `notElem` usedWords)) $ getWords field
+makeMove :: HashSet String -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
+makeMove dictionarySet usedWords field = do
+  let foundWords = filter (\(_, w, _) -> w `member` dictionarySet && (w `notElem` usedWords)) $ getWords field
   if null foundWords
     then do
       return (False, field, [], "", ((0, 0), ' '))

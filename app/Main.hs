@@ -6,7 +6,7 @@ module Main (main) where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Set (fromList)
+import Data.HashSet (fromList)
 import GHC.Generics
 import Lib
 import Network.Wai (Middleware)

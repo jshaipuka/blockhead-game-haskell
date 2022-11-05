@@ -10,7 +10,7 @@ import Data.Set (fromList)
 import GHC.Generics
 import Lib
 import Network.Wai (Middleware)
-import Network.Wai.Middleware.Cors (CorsResourcePolicy, cors, corsMethods, corsRequestHeaders, simpleCorsResourcePolicy)
+import Network.Wai.Middleware.Cors (CorsResourcePolicy, cors, corsMethods, corsRequestHeaders, simpleCorsResourcePolicy, simpleHeaders, simpleMethods)
 import Web.Scotty
 
 data MoveRequest = MoveRequest {field :: [String], usedWords :: [String]} deriving (Show, Generic)
@@ -25,15 +25,11 @@ instance ToJSON MoveResponse
 
 instance FromJSON MoveResponse
 
-allowCors :: Middleware
-allowCors = cors (const $ Just appCorsResourcePolicy)
+corsWithPreflightResourcePolicy :: CorsResourcePolicy
+corsWithPreflightResourcePolicy = simpleCorsResourcePolicy {corsMethods = "OPTIONS" : simpleMethods, corsRequestHeaders = simpleHeaders}
 
-appCorsResourcePolicy :: CorsResourcePolicy
-appCorsResourcePolicy =
-  simpleCorsResourcePolicy
-    { corsMethods = ["OPTIONS", "GET", "PUT", "POST"],
-      corsRequestHeaders = ["Authorization", "Content-Type"]
-    }
+allowCorsWithPreflight :: Middleware
+allowCorsWithPreflight = cors (const $ Just corsWithPreflightResourcePolicy)
 
 main :: IO ()
 main = do
@@ -41,7 +37,7 @@ main = do
   let dictionarySet = fromList dictionary
 
   scotty 8080 $ do
-    middleware allowCors
+    middleware allowCorsWithPreflight
     get "/api/field" $ do
       field <- liftIO (createNewField dictionary)
       json field

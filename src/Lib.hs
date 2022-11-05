@@ -55,7 +55,7 @@ wordsOfLength :: Int -> [String] -> [String]
 wordsOfLength n = filter $ \w -> length w == n
 
 getAvailableCells :: Field -> [Cell]
-getAvailableCells field = filterCells field (allCells field)
+getAvailableCells field = filterCells field $ allCells field
 
 allCells :: Field -> [Cell]
 allCells field = concatMap (\i -> map (i,) [0 .. length (field !! i) - 1]) [0 .. length field - 1]
@@ -95,7 +95,7 @@ alphabet :: [Char]
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
 
 getAvailableMoves :: Field -> [Move]
-getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) (getAvailableCells field)
+getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) $ getAvailableCells field
 
 getWords :: Field -> [(Path, String, Move)]
 getWords field = getWords' field (getAvailableMoves field)
@@ -119,13 +119,12 @@ mkUniq = toList . fromList
 
 makeMove :: Set String -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
 makeMove dictionary usedWords field = do
-  let allWords = getWords field
-  let realWords = filter (\(_, w, _) -> w `member` dictionary && (w `notElem` usedWords)) allWords
-  if null realWords
+  let foundWords = filter (\(_, w, _) -> w `member` dictionary && (w `notElem` usedWords)) $ getWords field
+  if null foundWords
     then do
       return (False, field, [], "", ((0, 0), ' '))
     else do
-      let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) realWords
+      let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) foundWords
       wordIndex <- randomRIO (0, min (9 - difficulty) (length longestWordsFirst - 1)) :: IO Int
       let oneOfLongestWord = longestWordsFirst !! wordIndex
       let (path, word, (cell, letter)) = oneOfLongestWord

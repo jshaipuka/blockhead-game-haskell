@@ -9,8 +9,9 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Set (fromList)
 import GHC.Generics
 import Lib
+import Network.Wai (Middleware)
+import Network.Wai.Middleware.Cors (CorsResourcePolicy, cors, corsMethods, corsRequestHeaders, simpleCorsResourcePolicy)
 import Web.Scotty
-import Network.Wai.Middleware.Cors
 
 data MoveRequest = MoveRequest {field :: [String], usedWords :: [String]} deriving (Show, Generic)
 
@@ -24,22 +25,27 @@ instance ToJSON MoveResponse
 
 instance FromJSON MoveResponse
 
+allowCors :: Middleware
+allowCors = cors (const $ Just appCorsResourcePolicy)
+
+appCorsResourcePolicy :: CorsResourcePolicy
+appCorsResourcePolicy =
+  simpleCorsResourcePolicy
+    { corsMethods = ["OPTIONS", "GET", "PUT", "POST"],
+      corsRequestHeaders = ["Authorization", "Content-Type"]
+    }
+
 main :: IO ()
 main = do
   dictionary <- readDictionary
   let dictionarySet = fromList dictionary
 
-  scotty 3001 $ do
+  scotty 8080 $ do
+    middleware allowCors
     get "/api/field" $ do
       field <- liftIO (createNewField dictionary)
-      addHeader "Access-Control-Allow-Origin" "*"
       json field
-    options "/api/move-requests" $ do
-      addHeader "Access-Control-Allow-Origin" "*"
-      addHeader "Access-Control-Allow-Headers" "*"
     post "/api/move-requests" $ do
       MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest
       (updatedField, path, word, (cell, letter)) <- liftIO (makeMove dictionarySet usedWords field)
-      addHeader "Access-Control-Allow-Origin" "*"
-      addHeader "Access-Control-Allow-Headers" "*"
       json (MoveResponse updatedField path word cell letter)

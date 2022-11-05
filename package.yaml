@@ -27,6 +27,7 @@ dependencies:
 - scotty
 - text
 - aeson
+- wai
 - wai-cors
 
 data-files:

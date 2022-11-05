@@ -117,13 +117,17 @@ pathToWord field = map $ \(x, y) -> (field !! x) !! y
 mkUniq :: Ord a => [a] -> [a]
 mkUniq = toList . fromList
 
-makeMove :: Set String -> [String] -> Field -> IO (Field, Path, String, Move)
+makeMove :: Set String -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
 makeMove dictionary usedWords field = do
   let allWords = getWords field
   let realWords = filter (\(_, w, _) -> w `member` dictionary && (w `notElem` usedWords)) allWords
-  let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) realWords
-  wordIndex <- randomRIO (0, min (9 - difficulty) (length longestWordsFirst - 1)) :: IO Int
-  let oneOfLongestWord = longestWordsFirst !! wordIndex
-  let (path, word, (cell, letter)) = oneOfLongestWord
-  let updatedField = replaceChar field cell letter
-  return (updatedField, path, word, (cell, letter))
+  if null realWords
+    then do
+      return (False, field, [], "", ((0, 0), ' '))
+    else do
+      let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) realWords
+      wordIndex <- randomRIO (0, min (9 - difficulty) (length longestWordsFirst - 1)) :: IO Int
+      let oneOfLongestWord = longestWordsFirst !! wordIndex
+      let (path, word, (cell, letter)) = oneOfLongestWord
+      let updatedField = replaceChar field cell letter
+      return (True, updatedField, path, word, (cell, letter))

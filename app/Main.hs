@@ -8,14 +8,25 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as A
 import Data.HashSet (fromList)
 import GHC.Generics
-import Lib
+import qualified Lib as L
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy, cors, corsMethods, corsRequestHeaders, simpleCorsResourcePolicy, simpleHeaders, simpleMethods)
 import Web.Scotty
 
-data MoveRequest = MoveRequest {field :: [String], usedWords :: [String]} deriving (Show, Generic)
+data DifficultyDto = Easy | Medium | Hard deriving (Show, Generic)
+
+difficultyFromDto :: DifficultyDto -> L.Difficulty
+difficultyFromDto Easy = L.Easy
+difficultyFromDto Medium = L.Medium
+difficultyFromDto Hard = L.Hard
+
+data MoveRequest = MoveRequest {field :: [String], usedWords :: [String], difficulty :: DifficultyDto} deriving (Show, Generic)
 
 data MoveResponse = MoveResponse {success :: Bool, updatedField :: [String], path :: [(Int, Int)], word :: String, cell :: (Int, Int), letter :: Char} deriving (Show, Generic)
+
+instance A.ToJSON DifficultyDto
+
+instance A.FromJSON DifficultyDto
 
 instance A.ToJSON MoveRequest
 
@@ -33,17 +44,17 @@ allowCorsWithPreflight = cors (const $ Just corsWithPreflightResourcePolicy)
 
 main :: IO ()
 main = do
-  dictionary <- readDictionary
+  dictionary <- L.readDictionary
   let dictionarySet = fromList dictionary
-  let prefixSet = toPrefixDictionarySet dictionary
+  let prefixSet = L.toPrefixDictionarySet dictionary
 
   scotty 8080 $ do
     middleware allowCorsWithPreflight
     get "/api/field/:size" $ do
       size <- param "size"
-      field <- liftIO $ createNewField dictionary size
+      field <- liftIO $ L.createNewField dictionary size
       json field
     post "/api/move-requests" $ do
-      MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest
-      (success, updatedField, path, word, (cell, letter)) <- liftIO $ makeMove prefixSet dictionarySet Medium usedWords field
+      MoveRequest {field, usedWords, difficulty} <- jsonData :: ActionM MoveRequest
+      (success, updatedField, path, word, (cell, letter)) <- liftIO $ L.makeMove prefixSet dictionarySet (difficultyFromDto difficulty) usedWords field
       json $ MoveResponse success updatedField path word cell letter

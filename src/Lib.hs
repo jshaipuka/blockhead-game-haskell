@@ -81,7 +81,7 @@ getNeighbours field (x, y) = filter (\(a, b) -> 0 <= a && a < length field && 0 
     neighbours = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
 
 isEmpty :: Field -> Cell -> Bool
-isEmpty field (a, b) = (field !! a) !! b == '.'
+isEmpty field cell = field `charAt` cell == '.'
 
 hasLetter :: Field -> Cell -> Bool
 hasLetter field cell = not (isEmpty field cell)
@@ -90,17 +90,20 @@ reachableCells :: Field -> Cell -> HashSet Cell -> [Cell]
 reachableCells field (x, y) visited =
   filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) $ getNeighbours field (x, y)
 
+charAt :: Field -> Cell -> Char
+charAt field (x, y) = (field !! x) !! y
+
 paths :: HashSet String -> Field -> Cell -> [WordPath]
-paths prefixSet field start = paths' prefixSet field start (singleton start) (pathToWord field [start], [start])
+paths prefixSet field start = paths' prefixSet field start (singleton start) ([field `charAt` start], [start])
 
 paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
-paths' prefixSet field start visited (wordSoFar, pathSoFar) =
-  if wordSoFar `member` prefixSet
-    then (wordSoFar, pathSoFar) : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field pathSoFar cell)) (reachableCells field start visited)
+paths' prefixSet field start visited wordPathSoFar =
+  if fst wordPathSoFar `member` prefixSet
+    then wordPathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field start visited)
     else []
 
-appendCell :: Field -> Path -> Cell -> WordPath
-appendCell field path cell = (pathToWord field (path ++ [cell]), path ++ [cell])
+appendCell :: Field -> WordPath -> Cell -> WordPath
+appendCell field (word, path) cell = (word ++ [field `charAt` cell], path ++ [cell])
 
 alphabet :: String
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
@@ -121,9 +124,6 @@ getWords'' prefixSet field (cell, letter) = map (\(word, path) -> (path, word, (
 
 getWords''' :: HashSet String -> Field -> Cell -> [WordPath]
 getWords''' prefixSet field updatedCell = filter (\(_, path) -> updatedCell `elem` path) $ concatMap (paths prefixSet field) $ cellsWithLetters field
-
-pathToWord :: Field -> Path -> String
-pathToWord field = map $ \(x, y) -> (field !! x) !! y
 
 mkUniq :: (Eq a, Hashable a) => [a] -> [a]
 mkUniq = toList . fromList

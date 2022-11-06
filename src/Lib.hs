@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove, toPrefixDictionarySet) where
+module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove, toPrefixDictionarySet, Difficulty (Easy, Medium, Hard)) where
 
 import Data.HashSet (HashSet, fromList, insert, member, singleton, toList)
 import Data.Hashable (Hashable)
@@ -19,9 +19,13 @@ type WordPath = (String, Path)
 
 type Move = (Cell, Char)
 
--- | Can be 0 or bigger. The bigger the value the easier to play.
-wordPickRange :: Int
-wordPickRange = 0
+data Difficulty = Easy | Medium | Hard
+
+-- | The bigger the value the easier to play.
+wordPickRange :: Difficulty -> Int
+wordPickRange Easy = 30
+wordPickRange Medium = 15
+wordPickRange Hard = 0
 
 createNewField :: [String] -> Int -> IO Field
 createNewField dictionary size = do
@@ -73,10 +77,10 @@ filterCells :: Field -> [Cell] -> [Cell]
 filterCells field = filter $ \candidate -> isEmpty field candidate && hasNeighboursWithLetter field candidate
 
 hasNeighboursWithLetter :: Field -> Cell -> Bool
-hasNeighboursWithLetter field cell = any (hasLetter field) $ getNeighbours field cell
+hasNeighboursWithLetter field cell = any (hasLetter field) $ field `neighboursOf` cell
 
-getNeighbours :: Field -> Cell -> [Cell]
-getNeighbours field (x, y) = filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a)) neighbours
+neighboursOf :: Field -> Cell -> [Cell]
+neighboursOf field (x, y) = filter (\(a, b) -> 0 <= a && a < length field && 0 <= b && b < length (field !! a)) neighbours
   where
     neighbours = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
 
@@ -87,8 +91,11 @@ hasLetter :: Field -> Cell -> Bool
 hasLetter field cell = not (isEmpty field cell)
 
 reachableCells :: Field -> Cell -> HashSet Cell -> [Cell]
-reachableCells field (x, y) visited =
-  filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) $ getNeighbours field (x, y)
+reachableCells field cell visited =
+  filter isNotVisitedLetter $ field `neighboursOf` cell
+  where
+    isNotVisitedLetter :: Cell -> Bool
+    isNotVisitedLetter c = not (c `member` visited) && hasLetter field c
 
 charAt :: Field -> Cell -> Char
 charAt field (x, y) = (field !! x) !! y
@@ -97,10 +104,9 @@ paths :: HashSet String -> Field -> Cell -> [WordPath]
 paths prefixSet field start = paths' prefixSet field start (singleton start) ([field `charAt` start], [start])
 
 paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
-paths' prefixSet field current visited wordPathSoFar =
-  if fst wordPathSoFar `member` prefixSet
-    then wordPathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field current visited)
-    else []
+paths' prefixSet field current visited wordPathSoFar@(word, _)
+  | word `member` prefixSet = wordPathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field current visited)
+  | otherwise = []
 
 appendCell :: Field -> WordPath -> Cell -> WordPath
 appendCell field (word, path) cell = (word ++ [field `charAt` cell], path ++ [cell])
@@ -128,15 +134,15 @@ getWords''' prefixSet field updatedCell = filter (\(_, path) -> updatedCell `ele
 mkUniq :: (Eq a, Hashable a) => [a] -> [a]
 mkUniq = toList . fromList
 
-makeMove :: HashSet String -> HashSet String -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
-makeMove prefixSet dictionarySet usedWords field = do
+makeMove :: HashSet String -> HashSet String -> Difficulty -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
+makeMove prefixSet dictionarySet difficulty usedWords field = do
   let foundWords = filter (\(_, w, _) -> w `member` dictionarySet && (w `notElem` usedWords)) $ getWords prefixSet field
   if null foundWords
     then do
       return (False, field, [], "", ((0, 0), ' '))
     else do
       let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) foundWords
-      wordIndex <- randomRIO (0, min wordPickRange $ length longestWordsFirst - 1) :: IO Int
+      wordIndex <- randomRIO (0, min (wordPickRange difficulty) $ length longestWordsFirst - 1) :: IO Int
       let oneOfLongestWord = longestWordsFirst !! wordIndex
       let (path, word, (cell, letter)) = oneOfLongestWord
       let updatedField = replaceChar field cell letter

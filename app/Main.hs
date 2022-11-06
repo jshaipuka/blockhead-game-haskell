@@ -5,7 +5,7 @@
 module Main (main) where
 
 import Control.Monad.IO.Class (liftIO)
-import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson as A
 import Data.HashSet (fromList)
 import GHC.Generics
 import Lib
@@ -17,13 +17,13 @@ data MoveRequest = MoveRequest {field :: [String], usedWords :: [String]} derivi
 
 data MoveResponse = MoveResponse {success :: Bool, updatedField :: [String], path :: [(Int, Int)], word :: String, cell :: (Int, Int), letter :: Char} deriving (Show, Generic)
 
-instance ToJSON MoveRequest
+instance A.ToJSON MoveRequest
 
-instance FromJSON MoveRequest
+instance A.FromJSON MoveRequest
 
-instance ToJSON MoveResponse
+instance A.ToJSON MoveResponse
 
-instance FromJSON MoveResponse
+instance A.FromJSON MoveResponse
 
 corsWithPreflightResourcePolicy :: CorsResourcePolicy
 corsWithPreflightResourcePolicy = simpleCorsResourcePolicy {corsMethods = "OPTIONS" : simpleMethods, corsRequestHeaders = simpleHeaders}
@@ -45,5 +45,5 @@ main = do
       json field
     post "/api/move-requests" $ do
       MoveRequest {field, usedWords} <- jsonData :: ActionM MoveRequest
-      (success, updatedField, path, word, (cell, letter)) <- liftIO $ makeMove prefixSet dictionarySet usedWords field
+      (success, updatedField, path, word, (cell, letter)) <- liftIO $ makeMove prefixSet dictionarySet Medium usedWords field
       json $ MoveResponse success updatedField path word cell letter

@@ -86,8 +86,8 @@ isEmpty field (a, b) = (field !! a) !! b == '.'
 hasLetter :: Field -> Cell -> Bool
 hasLetter field cell = not (isEmpty field cell)
 
-reachable :: Field -> Cell -> HashSet Cell -> [Cell]
-reachable field (x, y) visited =
+reachableCells :: Field -> Cell -> HashSet Cell -> [Cell]
+reachableCells field (x, y) visited =
   filter (\(a, b) -> not ((a, b) `member` visited) && hasLetter field (a, b)) $ getNeighbours field (x, y)
 
 paths :: HashSet String -> Field -> Cell -> [WordPath]
@@ -95,7 +95,12 @@ paths prefixSet field start = paths' prefixSet field start (singleton start) (pa
 
 paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
 paths' prefixSet field start visited pathSoFar =
-  pathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (pathToWord field (snd pathSoFar ++ [cell]), snd pathSoFar ++ [cell])) (filter (\cell -> pathToWord field (snd pathSoFar ++ [cell]) `member` prefixSet) $ reachable field start visited)
+  pathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field pathSoFar cell)) perspectiveNeighbours
+  where
+    perspectiveNeighbours = filter (\cell -> fst (appendCell field pathSoFar cell) `member` prefixSet) $ reachableCells field start visited
+
+appendCell :: Field -> WordPath -> Cell -> WordPath
+appendCell field wordPath cell = (pathToWord field (snd wordPath ++ [cell]), snd wordPath ++ [cell])
 
 alphabet :: String
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']

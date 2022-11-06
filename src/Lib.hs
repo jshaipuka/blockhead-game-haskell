@@ -23,9 +23,6 @@ type Move = (Cell, Char)
 difficulty :: Int
 difficulty = 3
 
-longestWordComputerCanFind :: Int
-longestWordComputerCanFind = 8
-
 createNewField :: [String] -> Int -> IO Field
 createNewField dictionary size = do
   let initWords = wordsOfLength size dictionary
@@ -98,10 +95,7 @@ paths prefixSet field start = paths' prefixSet field start (singleton start) (pa
 
 paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
 paths' prefixSet field start visited pathSoFar =
-  pathSoFar :
-  if length pathSoFar < longestWordComputerCanFind
-    then concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (pathToWord field (snd pathSoFar ++ [cell]), snd pathSoFar ++ [cell])) $ filter (\cell -> pathToWord field (snd pathSoFar ++ [cell]) `member` prefixSet) $ reachable field start visited
-    else []
+  pathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (pathToWord field (snd pathSoFar ++ [cell]), snd pathSoFar ++ [cell])) (filter (\cell -> pathToWord field (snd pathSoFar ++ [cell]) `member` prefixSet) $ reachable field start visited)
 
 alphabet :: String
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']

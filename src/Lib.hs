@@ -19,9 +19,9 @@ type WordPath = (String, Path)
 
 type Move = (Cell, Char)
 
--- | Should be in range from 0 to 9 (inclusively). The bigger the value the more difficult to play.
-difficulty :: Int
-difficulty = 3
+-- | Can be 0 or bigger. The bigger the value the easier to play.
+wordPickRange :: Int
+wordPickRange = 0
 
 createNewField :: [String] -> Int -> IO Field
 createNewField dictionary size = do
@@ -97,9 +97,9 @@ paths :: HashSet String -> Field -> Cell -> [WordPath]
 paths prefixSet field start = paths' prefixSet field start (singleton start) ([field `charAt` start], [start])
 
 paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
-paths' prefixSet field start visited wordPathSoFar =
+paths' prefixSet field current visited wordPathSoFar =
   if fst wordPathSoFar `member` prefixSet
-    then wordPathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field start visited)
+    then wordPathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field current visited)
     else []
 
 appendCell :: Field -> WordPath -> Cell -> WordPath
@@ -136,7 +136,7 @@ makeMove prefixSet dictionarySet usedWords field = do
       return (False, field, [], "", ((0, 0), ' '))
     else do
       let longestWordsFirst = sortBy (\(_, a, _) (_, b, _) -> compare (length b) (length a)) foundWords
-      wordIndex <- randomRIO (0, min (9 - difficulty) $ length longestWordsFirst - 1) :: IO Int
+      wordIndex <- randomRIO (0, min wordPickRange $ length longestWordsFirst - 1) :: IO Int
       let oneOfLongestWord = longestWordsFirst !! wordIndex
       let (path, word, (cell, letter)) = oneOfLongestWord
       let updatedField = replaceChar field cell letter

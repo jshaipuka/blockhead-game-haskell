@@ -6,12 +6,12 @@ module Main (main) where
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as A
-import Data.HashSet (fromList)
-import GHC.Generics
+import qualified Data.HashSet as S
+import GHC.Generics (Generic)
 import qualified Lib as L
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy, cors, corsMethods, corsRequestHeaders, simpleCorsResourcePolicy, simpleHeaders, simpleMethods)
-import Web.Scotty
+import Web.Scotty (ActionM, get, json, jsonData, middleware, param, post, scotty)
 
 data DifficultyDto = Easy | Medium | Hard deriving (Show, Generic)
 
@@ -45,7 +45,7 @@ allowCorsWithPreflight = cors (const $ Just corsWithPreflightResourcePolicy)
 main :: IO ()
 main = do
   dictionary <- L.readDictionary
-  let dictionarySet = fromList dictionary
+  let dictionarySet = S.fromList dictionary
   let prefixSet = L.toPrefixDictionarySet dictionary
 
   scotty 8080 $ do

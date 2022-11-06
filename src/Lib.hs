@@ -2,12 +2,12 @@
 
 module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove, toPrefixDictionarySet, Difficulty (Easy, Medium, Hard)) where
 
-import Data.HashSet (HashSet, fromList, insert, member, singleton, toList)
+import qualified Data.HashSet as S
 import Data.Hashable (Hashable)
 import Data.List (sortBy)
-import Data.List.Split
+import Data.List.Split (splitOn)
 import Paths_blockhead_game (getDataFileName)
-import System.Random
+import System.Random (randomRIO)
 
 type Field = [[Char]]
 
@@ -55,8 +55,8 @@ readDictionary = do
   contents <- readFile dictionaryFileName
   return (splitOn "\n" contents)
 
-toPrefixDictionarySet :: [String] -> HashSet String
-toPrefixDictionarySet dictionary = fromList $ concatMap prefixes dictionary
+toPrefixDictionarySet :: [String] -> S.HashSet String
+toPrefixDictionarySet dictionary = S.fromList $ concatMap prefixes dictionary
 
 prefixes :: String -> [String]
 prefixes w = map (`take` w) [1 .. length w]
@@ -90,22 +90,22 @@ isEmpty field cell = field `charAt` cell == '.'
 hasLetter :: Field -> Cell -> Bool
 hasLetter field cell = not (isEmpty field cell)
 
-reachableCells :: Field -> Cell -> HashSet Cell -> [Cell]
+reachableCells :: Field -> Cell -> S.HashSet Cell -> [Cell]
 reachableCells field cell visited =
   filter isNotVisitedLetter $ field `neighboursOf` cell
   where
     isNotVisitedLetter :: Cell -> Bool
-    isNotVisitedLetter c = not (c `member` visited) && hasLetter field c
+    isNotVisitedLetter c = not (c `S.member` visited) && hasLetter field c
 
 charAt :: Field -> Cell -> Char
 charAt field (x, y) = (field !! x) !! y
 
-paths :: HashSet String -> Field -> Cell -> [WordPath]
-paths prefixSet field start = paths' prefixSet field start (singleton start) ([field `charAt` start], [start])
+paths :: S.HashSet String -> Field -> Cell -> [WordPath]
+paths prefixSet field start = paths' prefixSet field start (S.singleton start) ([field `charAt` start], [start])
 
-paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
+paths' :: S.HashSet String -> Field -> Cell -> S.HashSet Cell -> WordPath -> [WordPath]
 paths' prefixSet field current visited wordPathSoFar@(word, _)
-  | word `member` prefixSet = wordPathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field current visited)
+  | word `S.member` prefixSet = wordPathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `S.insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field current visited)
   | otherwise = []
 
 appendCell :: Field -> WordPath -> Cell -> WordPath
@@ -117,26 +117,26 @@ alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
 getAvailableMoves :: Field -> [Move]
 getAvailableMoves field = concatMap (\cell -> map (cell,) alphabet) $ getAvailableCells field
 
-getWords :: HashSet String -> Field -> [(Path, String, Move)]
+getWords :: S.HashSet String -> Field -> [(Path, String, Move)]
 getWords prefixSet field = getWords' prefixSet field (getAvailableMoves field)
 
-getWords' :: HashSet String -> Field -> [Move] -> [(Path, String, Move)]
+getWords' :: S.HashSet String -> Field -> [Move] -> [(Path, String, Move)]
 getWords' prefixSet field moves = mkUniq $ concatMap (getWords'' prefixSet field) moves
 
-getWords'' :: HashSet String -> Field -> Move -> [(Path, String, Move)]
+getWords'' :: S.HashSet String -> Field -> Move -> [(Path, String, Move)]
 getWords'' prefixSet field (cell, letter) = map (\(word, path) -> (path, word, (cell, letter))) (getWords''' prefixSet fieldAfterMove cell)
   where
     fieldAfterMove = replaceChar field cell letter
 
-getWords''' :: HashSet String -> Field -> Cell -> [WordPath]
+getWords''' :: S.HashSet String -> Field -> Cell -> [WordPath]
 getWords''' prefixSet field updatedCell = filter (\(_, path) -> updatedCell `elem` path) $ concatMap (paths prefixSet field) $ cellsWithLetters field
 
 mkUniq :: (Eq a, Hashable a) => [a] -> [a]
-mkUniq = toList . fromList
+mkUniq = S.toList . S.fromList
 
-makeMove :: HashSet String -> HashSet String -> Difficulty -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
+makeMove :: S.HashSet String -> S.HashSet String -> Difficulty -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
 makeMove prefixSet dictionarySet difficulty usedWords field = do
-  let foundWords = filter (\(_, w, _) -> w `member` dictionarySet && (w `notElem` usedWords)) $ getWords prefixSet field
+  let foundWords = filter (\(_, w, _) -> w `S.member` dictionarySet && (w `notElem` usedWords)) $ getWords prefixSet field
   if null foundWords
     then do
       return (False, field, [], "", ((0, 0), ' '))

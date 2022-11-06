@@ -94,13 +94,13 @@ paths :: HashSet String -> Field -> Cell -> [WordPath]
 paths prefixSet field start = paths' prefixSet field start (singleton start) (pathToWord field [start], [start])
 
 paths' :: HashSet String -> Field -> Cell -> HashSet Cell -> WordPath -> [WordPath]
-paths' prefixSet field start visited pathSoFar =
-  pathSoFar : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field pathSoFar cell)) perspectiveNeighbours
-  where
-    perspectiveNeighbours = filter (\cell -> fst (appendCell field pathSoFar cell) `member` prefixSet) $ reachableCells field start visited
+paths' prefixSet field start visited (wordSoFar, pathSoFar) =
+  if wordSoFar `member` prefixSet
+    then (wordSoFar, pathSoFar) : concatMap (\cell -> paths' prefixSet field cell (cell `insert` visited) (appendCell field pathSoFar cell)) (reachableCells field start visited)
+    else []
 
-appendCell :: Field -> WordPath -> Cell -> WordPath
-appendCell field wordPath cell = (pathToWord field (snd wordPath ++ [cell]), snd wordPath ++ [cell])
+appendCell :: Field -> Path -> Cell -> WordPath
+appendCell field path cell = (pathToWord field (path ++ [cell]), path ++ [cell])
 
 alphabet :: String
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']

@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove, toPrefixDictionarySet, Difficulty (Easy, Medium, Hard)) where
+module Lib (Field, createField, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove, toPrefixDictionarySet, Difficulty (Easy, Medium, Hard)) where
 
 import qualified Data.HashSet as S
 import Data.Hashable (Hashable)

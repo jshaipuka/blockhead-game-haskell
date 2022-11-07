@@ -6,6 +6,7 @@ module Main (main) where
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as A
+import Dictionary (readDictionary, toPrefixDictionary)
 import GHC.Generics (Generic)
 import qualified Lib as L
 import Network.Wai (Middleware)
@@ -43,8 +44,8 @@ allowCorsWithPreflight = cors (const $ Just corsWithPreflightResourcePolicy)
 
 main :: IO ()
 main = do
-  dictionary <- L.readDictionary
-  let prefixDictionary = L.toPrefixDictionary dictionary
+  dictionary <- readDictionary
+  let prefixDictionary = toPrefixDictionary dictionary
 
   scotty 8080 $ do
     middleware allowCorsWithPreflight

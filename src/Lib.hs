@@ -1,12 +1,11 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createField, createEmptyField, readDictionary, wordsOfLength, createNewField, makeMove, toPrefixDictionary, Difficulty (Easy, Medium, Hard)) where
+module Lib (Field, createField, createEmptyField, wordsOfLength, createNewField, makeMove, Difficulty (Easy, Medium, Hard)) where
 
 import qualified Data.HashSet as S
 import Data.Hashable (Hashable)
 import Data.List (sortBy)
-import Data.List.Split (splitOn)
-import Paths_blockhead_game (getDataFileName)
+import Dictionary (Dictionary, PrefixDictionary)
 import System.Random (randomRIO)
 
 type Field = [[Char]]
@@ -18,10 +17,6 @@ type Path = [Cell]
 type WordPath = (String, Path)
 
 type Move = (Cell, Char)
-
-type Dictionary = S.HashSet String
-
-type PrefixDictionary = S.HashSet String
 
 data Difficulty = Easy | Medium | Hard
 
@@ -52,18 +47,6 @@ replaceRow field x newRow = take x field ++ [newRow] ++ drop (x + 1) field
 
 replaceChar' :: [Char] -> Int -> Char -> [Char]
 replaceChar' field x letter = take x field ++ [letter] ++ drop (x + 1) field
-
-readDictionary :: IO Dictionary
-readDictionary = do
-  dictionaryFileName <- getDataFileName "dictionary.txt"
-  contents <- readFile dictionaryFileName
-  return (S.fromList (splitOn "\n" contents))
-
-toPrefixDictionary :: Dictionary -> PrefixDictionary
-toPrefixDictionary dictionary = S.fromList $ concatMap prefixes dictionary
-
-prefixes :: String -> [String]
-prefixes w = map (`take` w) [1 .. length w]
 
 wordsOfLength :: Int -> Dictionary -> [String]
 wordsOfLength n dictionary = filter (\w -> length w == n) (S.toList dictionary)

@@ -2,7 +2,7 @@ import Lib (createEmptyField, createField)
 import Test.QuickCheck
 
 prop_createEmptyField :: Int -> Property
-prop_createEmptyField size = size > 0 ==> length field == size && length (head field) == size && length (filter (== '.') (concat field)) == size * size
+prop_createEmptyField size = size > 0 ==> length field == size && length (head field) == size && length (filter (== '.') $ concat field) == size * size
   where
     field = createEmptyField size
 

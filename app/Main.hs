@@ -6,7 +6,6 @@ module Main (main) where
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as A
-import qualified Data.HashSet as S
 import GHC.Generics (Generic)
 import qualified Lib as L
 import Network.Wai (Middleware)
@@ -45,8 +44,7 @@ allowCorsWithPreflight = cors (const $ Just corsWithPreflightResourcePolicy)
 main :: IO ()
 main = do
   dictionary <- L.readDictionary
-  let dictionarySet = S.fromList dictionary
-  let prefixSet = L.toPrefixDictionarySet dictionary
+  let prefixDictionary = L.toPrefixDictionary dictionary
 
   scotty 8080 $ do
     middleware allowCorsWithPreflight
@@ -56,5 +54,5 @@ main = do
       json field
     post "/api/move-requests" $ do
       MoveRequest {field, usedWords, difficulty} <- jsonData :: ActionM MoveRequest
-      (success, updatedField, path, word, (cell, letter)) <- liftIO $ L.makeMove prefixSet dictionarySet (difficultyFromDto difficulty) usedWords field
+      (success, updatedField, path, word, (cell, letter)) <- liftIO $ L.makeMove prefixDictionary dictionary (difficultyFromDto difficulty) usedWords field
       json $ MoveResponse success updatedField path word cell letter

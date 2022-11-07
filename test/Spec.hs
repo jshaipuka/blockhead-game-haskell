@@ -1,4 +1,4 @@
-import Lib (createEmptyField, createField)
+import Field.Internal (createEmptyField, createField)
 import Test.QuickCheck
 
 prop_createEmptyField :: Int -> Property

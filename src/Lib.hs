@@ -41,7 +41,7 @@ reachableCells field cell visited =
     isNotVisitedLetter c = not (c `S.member` visited) && hasLetter field c
 
 appendCell :: Field -> WordPath -> Cell -> WordPath
-appendCell field (word, path) cell = (word ++ [field `charAt` cell], path ++ [cell])
+appendCell field (word, path) cell = (word ++ [field `letterAt` cell], path ++ [cell])
 
 alphabet :: String
 alphabet = ['А' .. 'Е'] ++ ['Ё'] ++ ['Ж' .. 'Я']
@@ -58,13 +58,13 @@ getWords' prefixDictionary field moves = mkUniq $ concatMap (getWords'' prefixDi
 getWords'' :: PrefixDictionary -> Field -> Move -> [(Path, String, Move)]
 getWords'' prefixDictionary field (cell, letter) = map (\(word, path) -> (path, word, (cell, letter))) (getWords''' prefixDictionary fieldAfterMove cell)
   where
-    fieldAfterMove = replaceChar field cell letter
+    fieldAfterMove = replaceLetter field cell letter
 
 getWords''' :: PrefixDictionary -> Field -> Cell -> [WordPath]
 getWords''' prefixDictionary field updatedCell = filter (\(_, path) -> updatedCell `elem` path) $ concatMap (paths prefixDictionary field) $ cellsWithLetters field
 
 paths :: PrefixDictionary -> Field -> Cell -> [WordPath]
-paths prefixDictionary field start = paths' prefixDictionary field start (S.singleton start) ([field `charAt` start], [start])
+paths prefixDictionary field start = paths' prefixDictionary field start (S.singleton start) ([field `letterAt` start], [start])
 
 paths' :: PrefixDictionary -> Field -> Cell -> S.HashSet Cell -> WordPath -> [WordPath]
 paths' prefixDictionary field current visited wordPathSoFar@(word, _)
@@ -85,5 +85,5 @@ makeMove prefixDictionary dictionary difficulty usedWords field = do
       wordIndex <- randomRIO (0, min (wordPickRange difficulty) $ length longestWordsFirst - 1) :: IO Int
       let oneOfLongestWord = longestWordsFirst !! wordIndex
       let (path, word, (cell, letter)) = oneOfLongestWord
-      let updatedField = replaceChar field cell letter
+      let updatedField = replaceLetter field cell letter
       return (True, updatedField, path, word, (cell, letter))

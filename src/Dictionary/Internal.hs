@@ -19,3 +19,6 @@ toPrefixDictionary dictionary = S.fromList $ concatMap prefixes dictionary
   where
     prefixes :: String -> [String]
     prefixes word = map (`take` word) [1 .. length word]
+
+wordsOfLength :: Int -> Dictionary -> [String]
+wordsOfLength n dictionary = filter (\w -> length w == n) (S.toList dictionary)

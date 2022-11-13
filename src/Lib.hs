@@ -1,11 +1,11 @@
 {-# LANGUAGE TupleSections #-}
 
-module Lib (Field, createField, wordsOfLength, createNewField, makeMove, Difficulty (Easy, Medium, Hard)) where
+module Lib (Field, createField, createNewField, makeMove, Difficulty (Easy, Medium, Hard)) where
 
 import qualified Data.HashSet as S
 import Data.Hashable (Hashable)
 import Data.List (sortBy)
-import Dictionary (Dictionary, PrefixDictionary)
+import Dictionary (Dictionary, PrefixDictionary, wordsOfLength)
 import Field
 import System.Random (randomRIO)
 
@@ -20,7 +20,7 @@ data Difficulty = Easy | Medium | Hard
 -- | The bigger the value the easier to play.
 wordPickRange :: Difficulty -> Int
 wordPickRange Easy = 30
-wordPickRange Medium = 15
+wordPickRange Medium = 13
 wordPickRange Hard = 0
 
 createNewField :: Dictionary -> Int -> IO Field
@@ -29,9 +29,6 @@ createNewField dictionary size = do
   initWordIndex <- randomRIO (0, length initWords - 1) :: IO Int
   let initWord = initWords !! initWordIndex
   return (createField size initWord)
-
-wordsOfLength :: Int -> Dictionary -> [String]
-wordsOfLength n dictionary = filter (\w -> length w == n) (S.toList dictionary)
 
 reachableCells :: Field -> Cell -> S.HashSet Cell -> [Cell]
 reachableCells field cell visited =

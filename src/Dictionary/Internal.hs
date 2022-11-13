@@ -4,21 +4,21 @@ import qualified Data.HashSet as S
 import Data.List.Split (splitOn)
 import Paths_blockhead_game (getDataFileName)
 
-type Dictionary = S.HashSet String
+newtype Dictionary = Dictionary (S.HashSet String)
 
-type PrefixDictionary = S.HashSet String
+newtype PrefixDictionary = PrefixDictionary (S.HashSet String)
 
 readDictionary :: IO Dictionary
 readDictionary = do
   dictionaryFileName <- getDataFileName "dictionary.txt"
   contents <- readFile dictionaryFileName
-  return $ S.fromList $ splitOn "\n" contents
+  return $ Dictionary (S.fromList $ splitOn "\n" contents)
 
 toPrefixDictionary :: Dictionary -> PrefixDictionary
-toPrefixDictionary dictionary = S.fromList $ concatMap prefixes dictionary
+toPrefixDictionary (Dictionary ws) = PrefixDictionary (S.fromList $ concatMap prefixes ws)
   where
     prefixes :: String -> [String]
     prefixes word = map (`take` word) [1 .. length word]
 
 wordsOfLength :: Int -> Dictionary -> [String]
-wordsOfLength n dictionary = filter (\w -> length w == n) (S.toList dictionary)
+wordsOfLength n (Dictionary ws) = filter (\w -> length w == n) (S.toList ws)

@@ -5,7 +5,7 @@ module Lib (Field, createField, createNewField, makeMove, Difficulty (Easy, Medi
 import qualified Data.HashSet as S
 import Data.Hashable (Hashable)
 import Data.List (sortBy)
-import Dictionary (Dictionary, PrefixDictionary, wordsOfLength)
+import Dictionary (Dictionary (Dictionary), PrefixDictionary (PrefixDictionary), wordsOfLength)
 import Field
 import System.Random (randomRIO)
 
@@ -64,16 +64,16 @@ paths :: PrefixDictionary -> Field -> Cell -> [WordPath]
 paths prefixDictionary field start = paths' prefixDictionary field start (S.singleton start) ([field `letterAt` start], [start])
 
 paths' :: PrefixDictionary -> Field -> Cell -> S.HashSet Cell -> WordPath -> [WordPath]
-paths' prefixDictionary field current visited wordPathSoFar@(word, _)
-  | word `S.member` prefixDictionary = wordPathSoFar : concatMap (\cell -> paths' prefixDictionary field cell (cell `S.insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field current visited)
+paths' prefixDictionary@(PrefixDictionary prefixes) field current visited wordPathSoFar@(word, _)
+  | word `S.member` prefixes = wordPathSoFar : concatMap (\cell -> paths' prefixDictionary field cell (cell `S.insert` visited) (appendCell field wordPathSoFar cell)) (reachableCells field current visited)
   | otherwise = []
 
 mkUniq :: (Eq a, Hashable a) => [a] -> [a]
 mkUniq = S.toList . S.fromList
 
 makeMove :: PrefixDictionary -> Dictionary -> Difficulty -> [String] -> Field -> IO (Bool, Field, Path, String, Move)
-makeMove prefixDictionary dictionary difficulty usedWords field = do
-  let foundWords = filter (\(_, w, _) -> w `S.member` dictionary && (w `notElem` usedWords)) $ getWords prefixDictionary field
+makeMove prefixDictionary (Dictionary ws) difficulty usedWords field = do
+  let foundWords = filter (\(_, w, _) -> w `S.member` ws && (w `notElem` usedWords)) $ getWords prefixDictionary field
   if null foundWords
     then do
       return (False, field, [], "", ((0, 0), ' '))

@@ -1,0 +1,19 @@
+FROM haskell:latest
+
+WORKDIR /app
+
+COPY stack.yaml stack.yaml
+COPY blockhead-game.cabal blockhead-game.cabal
+
+# Copy the rest of the application code
+COPY . .
+
+# See https://github.com/docker/for-win/issues/1340
+RUN sed -i 's/\r$//' dictionary.txt
+
+RUN stack setup
+RUN stack build --install-ghc
+
+EXPOSE 8080
+
+CMD ["stack", "exec", "blockhead-game-exe"]

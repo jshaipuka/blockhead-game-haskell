@@ -12,7 +12,7 @@ readDictionary :: IO Dictionary
 readDictionary = do
   dictionaryFileName <- getDataFileName "dictionary.txt"
   contents <- readFile dictionaryFileName
-  return $ Dictionary (S.fromList $ splitOn "\n" contents)
+  return $ Dictionary (S.fromList $ lines contents)
 
 toPrefixDictionary :: Dictionary -> PrefixDictionary
 toPrefixDictionary (Dictionary ws) = PrefixDictionary (S.fromList $ concatMap prefixes ws)

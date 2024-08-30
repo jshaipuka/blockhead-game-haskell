@@ -20,6 +20,13 @@ stack ghci --ghci-options src/Lib.hs
 
 Type `:quit` to exit once done.
 
+## Building And Running With Docker
+
+```shell
+docker build -t blockhead-game .
+docker run -p 8080:8080 -d blockhead-game
+```
+
 ## API
 
 ### Create New Field

@@ -5,7 +5,6 @@ WORKDIR /app
 COPY stack.yaml stack.yaml
 COPY blockhead-game.cabal blockhead-game.cabal
 
-# Copy the rest of the application code
 COPY . .
 
 # See https://github.com/docker/for-win/issues/1340

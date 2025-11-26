@@ -30,11 +30,10 @@ createNewField dictionary size = do
   return (createField size initWord)
 
 reachableCells :: Field -> Cell -> S.HashSet Cell -> [Cell]
-reachableCells field cell visited =
-  filter isNotVisitedLetter $ field `neighboursOf` cell
-  where
-    isNotVisitedLetter :: Cell -> Bool
-    isNotVisitedLetter c = not (c `S.member` visited) && hasLetter field c
+reachableCells field cell visited = do
+  c <- field `neighboursOf` cell
+  guard (hasLetter field c && not (c `S.member` visited))
+  return c
 
 appendCell :: Field -> WordPath -> Cell -> WordPath
 appendCell field (word, path) cell = (word ++ [field @ cell], path ++ [cell])
